@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { MainLayout } from "@/components/layout/MainLayout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { proposals as mockProposals, statusLabels, currentUser, salesComments } from "@/lib/mock-data"
+import { proposals as mockProposals, statusLabels, salesComments } from "@/lib/mock-data"
 import {
   FileText,
   TrendingUp,
@@ -12,7 +12,6 @@ import {
   CheckCircle,
   FolderOpen,
   Plus,
-  Sparkles,
   MessageSquare,
   Search,
   Globe,
@@ -20,63 +19,60 @@ import {
   Zap,
   Rocket,
   Lightbulb,
-  Eye,
   X,
-  Filter,
-  Building,
   Calendar,
-  Loader2,
+  Sparkles,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
-const kpiCards = [
-  { title: "New Briefs", value: 7, change: "+16%", icon: FileText, bgColor: "#dbeafe", iconColor: "#2563eb", borderColor: "#93c5fd", href: "/brief-intake?status=new" },
-  { title: "In Progress", value: 18, change: "+12%", icon: TrendingUp, bgColor: "#fef3c7", iconColor: "#d97706", borderColor: "#fcd34d", href: "/brief-intake?status=in_progress" },
-  { title: "Waiting Feedback", value: 9, change: "+29%", icon: Clock, bgColor: "#f3e8ff", iconColor: "#9333ea", borderColor: "#c4b5fd", href: "/sales-review?status=waiting" },
-  { title: "Ready for Sales", value: 11, change: "+10%", icon: CheckCircle, bgColor: "#dcfce7", iconColor: "#16a34a", borderColor: "#86efac", href: "/sales-review?status=ready" },
-]
-
-const pipelineStages = [
-  { id: "new_brief", title: "New Brief", color: "#2563eb", bgColor: "#eff6ff", borderColor: "#bfdbfe" },
-  { id: "drafting", title: "Drafting", color: "#ea580c", bgColor: "#fff7ed", borderColor: "#fed7aa" },
-  { id: "need_input", title: "Need Input", color: "#9333ea", bgColor: "#faf5ff", borderColor: "#e9d5ff" },
-  { id: "revised", title: "Revised", color: "#2563eb", bgColor: "#fef2f2", borderColor: "#fecaca" },
-  { id: "ready", title: "Ready", color: "#16a34a", bgColor: "#f0fdf4", borderColor: "#bbf7d0" },
-]
-
-const quickActions = [
-  { label: "Brief Baru", icon: Plus, bgColor: "linear-gradient(135deg, #fef2f2, #fee2e2)", color: "#2563eb", borderColor: "#fecaca", href: "/brief-intake?action=new" },
-  { label: "Buat Proposal", icon: FileText, bgColor: "linear-gradient(135deg, #eff6ff, #dbeafe)", color: "#2563eb", borderColor: "#93c5fd", href: "/proposal-builder?action=new" },
-  { label: "Library", icon: FolderOpen, bgColor: "linear-gradient(135deg, #f0fdf4, #dcfce7)", color: "#16a34a", borderColor: "#86efac", href: "/proposal-library" },
-  { label: "Brand Explorer", icon: Globe, bgColor: "linear-gradient(135deg, #fef3c7, #fde68a)", color: "#d97706", borderColor: "#fcd34d", href: "/brand-idea-explorer" },
-]
-
-const aiSuggestions = [
-  { title: "Similar Proposal", desc: "5 proposal serupa ditemukan", icon: Search, gradient: "linear-gradient(135deg, #f5f3ff, #ede9fe)", borderColor: "#c4b5fd", badge: "#7c3aed", href: "/proposal-library?tab=won" },
-  { title: "Improve Proposal", desc: "3 bagian bisa diperkuat", icon: Zap, gradient: "linear-gradient(135deg, #fef3c7, #fde68a)", borderColor: "#fcd34d", badge: "#ca8a04", href: "/proposal-builder?action=enhance" },
-  { title: "Creative Ideas", desc: "Ide integrasi brand fresh", icon: Lightbulb, gradient: "linear-gradient(135deg, #dcfce7, #bbf7d0)", borderColor: "#86efac", badge: "#15803d", href: "/brand-idea-explorer?action=ideas" },
-]
-
 export default function DashboardPage() {
   const router = useRouter()
   const [selectedProposal, setSelectedProposal] = useState<string | null>(null)
-  const [proposals, setProposals] = useState(mockProposals)
+  const [proposals, setProposals] = useState<any[]>([])
   const [briefs, setBriefs] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
-  // Fetch real data from Supabase
+  // Get user session
+  useEffect(() => {
+    const session = localStorage.getItem('pitchflow_session')
+    const userType = localStorage.getItem('pitchflow_user_type')
+
+    if (session) {
+      setCurrentUser(JSON.parse(session))
+    }
+  }, [])
+
+  // Fetch data based on user type
   useEffect(() => {
     async function fetchData() {
+      const userType = localStorage.getItem('pitchflow_user_type') || 'demo'
+
       try {
-        // Fetch briefs
+        // Demo user - use mock data
+        if (userType === 'demo') {
+          setProposals(mockProposals)
+          setBriefs(mockData.briefs)
+          setIsLoading(false)
+          return
+        }
+
+        // New user - empty data
+        if (userType === 'new') {
+          setProposals([])
+          setBriefs([])
+          setIsLoading(false)
+          return
+        }
+
+        // Existing user - fetch real data
         const briefsRes = await fetch('/api/briefs')
         const briefsData = await briefsRes.json()
         if (briefsData.success && briefsData.data) {
           setBriefs(briefsData.data)
         }
 
-        // Fetch proposals
         const proposalsRes = await fetch('/api/proposals')
         const proposalsData = await proposalsRes.json()
         if (proposalsData.success && proposalsData.data && proposalsData.data.length > 0) {
@@ -90,6 +86,52 @@ export default function DashboardPage() {
     }
     fetchData()
   }, [])
+
+  // Mock data for demo
+  const mockData = {
+    briefs: [
+      { id: "brief-1", brand_name: "Wardah", program: "Sinetron Ramadan", status: "new", created_at: "2025-05-19" },
+      { id: "brief-2", brand_name: "OPPO", program: "Sinetron", status: "in_progress", created_at: "2025-05-18" },
+      { id: "brief-3", brand_name: "Indomie", program: "Reality Show", status: "in_review", created_at: "2025-05-17" },
+    ]
+  }
+
+  const getKpiCards = () => {
+    const userType = localStorage.getItem('pitchflow_user_type') || 'demo'
+
+    if (userType === 'demo') {
+      return [
+        { title: "New Briefs", value: 7, change: "+16%", icon: FileText, bgColor: "#dbeafe", iconColor: "#2563eb", borderColor: "#93c5fd", href: "/brief-intake?status=new" },
+        { title: "In Progress", value: 18, change: "+12%", icon: TrendingUp, bgColor: "#fef3c7", iconColor: "#d97706", borderColor: "#fcd34d", href: "/brief-intake?status=in_progress" },
+        { title: "Waiting Feedback", value: 9, change: "+29%", icon: Clock, bgColor: "#f3e8ff", iconColor: "#9333ea", borderColor: "#c4b5fd", href: "/sales-review?status=waiting" },
+        { title: "Ready for Sales", value: 11, change: "+10%", icon: CheckCircle, bgColor: "#dcfce7", iconColor: "#16a34a", borderColor: "#86efac", href: "/sales-review?status=ready" },
+      ]
+    }
+
+    if (userType === 'new') {
+      return [
+        { title: "New Briefs", value: 0, change: "0%", icon: FileText, bgColor: "#dbeafe", iconColor: "#2563eb", borderColor: "#93c5fd", href: "/brief-intake?status=new" },
+        { title: "In Progress", value: 0, change: "0%", icon: TrendingUp, bgColor: "#fef3c7", iconColor: "#d97706", borderColor: "#fcd34d", href: "/brief-intake?status=in_progress" },
+        { title: "Waiting Feedback", value: 0, change: "0%", icon: Clock, bgColor: "#f3e8ff", iconColor: "#9333ea", borderColor: "#c4b5fd", href: "/sales-review?status=waiting" },
+        { title: "Ready for Sales", value: 0, change: "0%", icon: CheckCircle, bgColor: "#dcfce7", iconColor: "#16a34a", borderColor: "#86efac", href: "/sales-review?status=ready" },
+      ]
+    }
+
+    // Existing user - real data
+    const newBriefs = briefs.filter(b => b.status === 'new').length
+    const inProgress = briefs.filter(b => b.status === 'in_progress').length
+    const waiting = proposals.filter(p => p.status === 'need_input').length
+    const ready = proposals.filter(p => p.status === 'ready').length
+
+    return [
+      { title: "New Briefs", value: newBriefs, change: "", icon: FileText, bgColor: "#dbeafe", iconColor: "#2563eb", borderColor: "#93c5fd", href: "/brief-intake?status=new" },
+      { title: "In Progress", value: inProgress, change: "", icon: TrendingUp, bgColor: "#fef3c7", iconColor: "#d97706", borderColor: "#fcd34d", href: "/brief-intake?status=in_progress" },
+      { title: "Waiting Feedback", value: waiting, change: "", icon: Clock, bgColor: "#f3e8ff", iconColor: "#9333ea", borderColor: "#c4b5fd", href: "/sales-review?status=waiting" },
+      { title: "Ready for Sales", value: ready, change: "", icon: CheckCircle, bgColor: "#dcfce7", iconColor: "#16a34a", borderColor: "#86efac", href: "/sales-review?status=ready" },
+    ]
+  }
+
+  const kpiCards = getKpiCards()
 
   const getProposalsByStatus = (status: string) => {
     return proposals.filter(p => p.status === status)
@@ -106,9 +148,12 @@ export default function DashboardPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <div>
             <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>
-              Selamat datang, {currentUser.name.split(" ")[0]}! 👋</h1>
+              Selamat datang, {currentUser?.name?.split(" ")[0] || 'User'}! 👋</h1>
             <p style={{ fontSize: '14px', color: '#64748b' }}>
-              Berikut ringkasan pipeline proposal sponsorship Anda
+              {localStorage.getItem('pitchflow_user_type') === 'demo' && 'Demo mode - Data sample untuk percobaan'}
+              {localStorage.getItem('pitchflow_user_type') === 'new' && 'Mulai workflow baru dengan data kosong'}
+              {localStorage.getItem('pitchflow_user_type') === 'existing' && 'Berikut ringkasan pipeline proposal sponsorship Anda'}
+              {!localStorage.getItem('pitchflow_user_type') && 'Berikut ringkasan pipeline proposal sponsorship Anda'}
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

@@ -19,29 +19,33 @@ import {
   Calendar,
   Users,
   Presentation as PresentationIcon,
+  Radar,
+  PieChart,
+  TrendingUp,
+  Megaphone,
 } from "lucide-react"
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Brief Intake", href: "/brief-intake", icon: FileText },
-  { name: "Proposal Builder", href: "/proposal-builder", icon: PenLine },
-  { name: "Proposal Library", href: "/proposal-library", icon: FolderOpen },
-  { name: "Sales Review", href: "/sales-review", icon: MessageSquare },
+  { name: "Brief Requests", href: "/brief-intake", icon: FileText },
+  { name: "Create Proposal", href: "/proposal-builder", icon: PenLine },
+  { name: "Proposals", href: "/proposal-library", icon: FolderOpen },
+  { name: "Sales Pipeline", href: "/sales-review", icon: MessageSquare },
 ]
 
 const aiTools = [
-  { name: "Brand DNA Explorer", href: "/brand-dna-explorer", icon: Sparkles },
-  { name: "Trend Radar", href: "/trend-radar", icon: BarChart3 },
-  { name: "Audience Insights", href: "/audience-insights", icon: Users },
-  { name: "ROI Calculator", href: "/roi-calculator", icon: Sparkles },
-  { name: "Campaign Studio", href: "/campaign-studio", icon: Lightbulb },
+  { name: "Brand Analysis", href: "/brand-dna-explorer", icon: Sparkles },
+  { name: "Market Trends", href: "/trend-radar", icon: Radar },
+  { name: "Audience Analytics", href: "/audience-insights", icon: Users },
+  { name: "ROI Analysis", href: "/roi-calculator", icon: PieChart },
+  { name: "Content Studio", href: "/campaign-studio", icon: Megaphone },
 ]
 
 const toolsItems = [
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "Calendar", href: "/calendar", icon: Calendar },
-  { name: "Client CRM", href: "/client-crm", icon: Users },
-  { name: "Presentation", href: "/presentation", icon: PresentationIcon },
+  { name: "Performance", href: "/analytics", icon: TrendingUp },
+  { name: "Schedule", href: "/calendar", icon: Calendar },
+  { name: "Clients", href: "/client-crm", icon: Users },
+  { name: "Pitch Deck", href: "/presentation", icon: PresentationIcon },
 ]
 
 export function Sidebar() {
@@ -58,7 +62,6 @@ export function Sidebar() {
     setChatMessages([...chatMessages, { role: 'user', text: chatInput }])
     setChatInput("")
 
-    // Simulate AI response
     setTimeout(() => {
       const responses = [
         "Saya bisa membantu Anda membuat brief sponsorship yang lebih terstruktur. Apa brand yang sedang Anda tangani?",
@@ -138,8 +141,8 @@ export function Sidebar() {
                     fontWeight: 500,
                     textDecoration: 'none',
                     color: isActive ? 'white' : '#cbd5e1',
-                    backgroundColor: isActive ? '#7c3aed' : 'transparent',
-                    boxShadow: isActive ? '0 10px 15px -3px rgba(124, 58, 237, 0.3)' : 'none',
+                    backgroundColor: isActive ? '#2563eb' : 'transparent',
+                    boxShadow: isActive ? '0 10px 15px -3px rgba(37, 99, 235, 0.4)' : 'none',
                     transition: 'all 0.2s',
                   }}
                 >
@@ -183,8 +186,8 @@ export function Sidebar() {
                     fontWeight: 500,
                     textDecoration: 'none',
                     color: isActive ? 'white' : '#cbd5e1',
-                    backgroundColor: isActive ? '#7c3aed' : 'transparent',
-                    boxShadow: isActive ? '0 10px 15px -3px rgba(124, 58, 237, 0.3)' : 'none',
+                    backgroundColor: isActive ? '#2563eb' : 'transparent',
+                    boxShadow: isActive ? '0 10px 15px -3px rgba(37, 99, 235, 0.4)' : 'none',
                     transition: 'all 0.2s',
                   }}
                 >
@@ -235,8 +238,8 @@ export function Sidebar() {
                     fontWeight: 500,
                     textDecoration: 'none',
                     color: isActive ? 'white' : '#cbd5e1',
-                    backgroundColor: isActive ? '#7c3aed' : 'transparent',
-                    boxShadow: isActive ? '0 10px 15px -3px rgba(124, 58, 237, 0.3)' : 'none',
+                    backgroundColor: isActive ? '#2563eb' : 'transparent',
+                    boxShadow: isActive ? '0 10px 15px -3px rgba(37, 99, 235, 0.4)' : 'none',
                     transition: 'all 0.2s',
                   }}
                 >
@@ -260,14 +263,14 @@ export function Sidebar() {
           <div
             style={{
               padding: '12px',
-              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(59, 130, 246, 0.2))',
+              background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(59, 130, 246, 0.2))',
               borderRadius: '12px',
-              border: '1px solid rgba(124, 58, 237, 0.3)',
+              border: '1px solid rgba(37, 99, 235, 0.3)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <div style={{ padding: '6px', backgroundColor: 'rgba(124, 58, 237, 0.3)', borderRadius: '6px' }}>
-                <Sparkles size={14} color="#a78bfa" />
+              <div style={{ padding: '6px', backgroundColor: 'rgba(37, 99, 235, 0.3)', borderRadius: '6px' }}>
+                <Sparkles size={14} color="#60a5fa" />
               </div>
               <span style={{ color: 'white', fontSize: '12px', fontWeight: 600 }}>AI Assistant</span>
             </div>
@@ -283,7 +286,7 @@ export function Sidebar() {
                 justifyContent: 'center',
                 gap: '4px',
                 padding: '8px 12px',
-                backgroundColor: '#7c3aed',
+                backgroundColor: '#2563eb',
                 color: 'white',
                 fontSize: '12px',
                 fontWeight: 500,
@@ -334,7 +337,7 @@ export function Sidebar() {
             <div
               style={{
                 padding: '16px 20px',
-                backgroundColor: '#7c3aed',
+                backgroundColor: '#2563eb',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -391,7 +394,7 @@ export function Sidebar() {
                       maxWidth: '80%',
                       padding: '12px 16px',
                       borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                      backgroundColor: msg.role === 'user' ? '#7c3aed' : '#f1f5f9',
+                      backgroundColor: msg.role === 'user' ? '#2563eb' : '#f1f5f9',
                       color: msg.role === 'user' ? 'white' : '#0f172a',
                       fontSize: '13px',
                       lineHeight: 1.5,
@@ -435,7 +438,7 @@ export function Sidebar() {
                 style={{
                   width: '44px',
                   height: '44px',
-                  backgroundColor: chatInput.trim() ? '#7c3aed' : '#e2e8f0',
+                  backgroundColor: chatInput.trim() ? '#2563eb' : '#e2e8f0',
                   border: 'none',
                   borderRadius: '22px',
                   cursor: chatInput.trim() ? 'pointer' : 'not-allowed',

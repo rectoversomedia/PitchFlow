@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 
+type UserType = 'demo' | 'new' | 'existing'
+
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
@@ -14,6 +16,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [isDemoLoading, setIsDemoLoading] = useState(false)
+  const [selectedUserType, setSelectedUserType] = useState<UserType>('demo')
   const [error, setError] = useState("")
   const [googleError, setGoogleError] = useState("")
 
@@ -57,25 +60,40 @@ export default function LoginPage() {
   const handleDemoLogin = async () => {
     setIsDemoLoading(true)
 
-    // Demo login - set mock session and redirect
     try {
-      // Create demo session storage
-      const demoUser = {
-        id: "demo-user-1",
-        name: "Demo User",
-        email: "demo@pitchflow.app",
-        role: "Supervisor"
+      // Create session based on user type
+      const userData: Record<UserType, any> = {
+        demo: {
+          id: "demo-user-1",
+          name: "Demo User",
+          email: "demo@pitchflow.app",
+          role: "Supervisor",
+          userType: 'demo'
+        },
+        new: {
+          id: "new-user-1",
+          name: "New User",
+          email: email || "newuser@pitchflow.app",
+          role: "Sales",
+          userType: 'new'
+        },
+        existing: {
+          id: "existing-user-1",
+          name: "Fajar Pahlawan H.",
+          email: email || "fajar.p@rectoverso.com",
+          role: "Supervisor",
+          userType: 'existing'
+        }
       }
 
-      // Store in localStorage for demo purposes
+      const sessionData = userData[selectedUserType]
+
       if (typeof window !== 'undefined') {
-        localStorage.setItem('pitchflow_demo_user', JSON.stringify(demoUser))
-        localStorage.setItem('pitchflow_is_demo', 'true')
+        localStorage.setItem('pitchflow_session', JSON.stringify(sessionData))
+        localStorage.setItem('pitchflow_user_type', selectedUserType)
       }
 
-      // Small delay for UX
       await new Promise(resolve => setTimeout(resolve, 500))
-
       router.push('/dashboard')
     } catch (error) {
       console.error("Demo login error:", error)
@@ -415,6 +433,42 @@ export default function LoginPage() {
               </div>
             )}
 
+            {/* User Type Selection */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 10 }}>
+                Pilih Tipe User
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                {[
+                  { id: 'demo', label: 'Demo', desc: 'Data sample', color: '#16a34a' },
+                  { id: 'new', label: 'New User', desc: 'Data kosong', color: '#2563eb' },
+                  { id: 'existing', label: 'Existing', desc: 'Data real', color: '#7c3aed' },
+                ].map((type) => (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => setSelectedUserType(type.id as UserType)}
+                    style={{
+                      padding: '12px 8px',
+                      borderRadius: 10,
+                      border: selectedUserType === type.id ? `2px solid ${type.color}` : '2px solid #e2e8f0',
+                      background: selectedUserType === type.id ? `${type.color}10` : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 600, color: selectedUserType === type.id ? type.color : '#64748b', marginBottom: 2 }}>
+                      {type.label}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#94a3b8' }}>
+                      {type.desc}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Try Demo Button - GREEN */}
             <button
               type="button"
@@ -435,7 +489,6 @@ export default function LoginPage() {
                 fontWeight: 600,
                 color: 'white',
                 transition: 'all 0.2s',
-                marginTop: 16,
                 boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3)'
               }}
               onMouseEnter={(e) => {
@@ -457,14 +510,14 @@ export default function LoginPage() {
                     <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                     <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                   </svg>
-                  Memuat Demo...
+                  Memuat...
                 </>
               ) : (
                 <>
                   <svg style={{ width: 20, height: 20 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                     <polygon points="5 3 19 12 5 21 5 3"/>
                   </svg>
-                  Try Demo
+                  {selectedUserType === 'demo' ? 'Try Demo' : selectedUserType === 'new' ? 'Start New Workspace' : 'Login as Existing'}
                 </>
               )}
             </button>
@@ -476,7 +529,9 @@ export default function LoginPage() {
               fontSize: 11,
               color: '#94a3b8'
             }}>
-              Demo menggunakan data sample untuk coba aplikasi tanpa login
+              {selectedUserType === 'demo' && 'Demo menggunakan data sample untuk coba aplikasi tanpa login'}
+              {selectedUserType === 'new' && 'New user akan mulai dengan data kosong'}
+              {selectedUserType === 'existing' && 'Login dengan data real dari database'}
             </div>
           </div>
 
