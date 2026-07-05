@@ -242,7 +242,7 @@ export default function SalesReviewPage() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                           <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{proposal.title}</h4>
-                          {statusLabels[proposal.status]?.label === "Input" && (
+                          {statusLabels[proposal.status] === "Input" && (
                             <AlertCircle size={14} color="#9333ea" />
                           )}
                           {proposalComments.length > 0 && (
@@ -261,7 +261,7 @@ export default function SalesReviewPage() {
                             }
                             style={{ fontSize: '10px', padding: '2px 6px' }}
                           >
-                            {statusLabels[proposal.status]?.label}
+                            {statusLabels[proposal.status]}
                           </Badge>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ fontSize: '10px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
