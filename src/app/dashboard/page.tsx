@@ -125,13 +125,13 @@ export default function DashboardPage() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Link href="/proposal-library">
-              <Button variant="outline" size="sm" style={{ border: '1px solid #e2e8f0', backgroundColor: 'white', paddingLeft: '14px', paddingRight: '14px' }}>
-                <FolderOpen size={16} style={{ marginRight: '8px' }} /> Library
+              <Button variant="outline" size="sm" leftIcon={<FolderOpen size={16} />} style={{ border: '1px solid #e2e8f0', backgroundColor: 'white', paddingLeft: '14px', paddingRight: '14px' }}>
+                Library
               </Button>
             </Link>
             <Link href="/brief-intake?action=new">
-              <Button size="sm" style={{ backgroundColor: '#2563eb', paddingLeft: '14px', paddingRight: '14px' }}>
-                <Plus size={16} style={{ marginRight: '8px' }} /> Brief Baru
+              <Button size="sm" leftIcon={<Plus size={16} />} style={{ backgroundColor: '#2563eb', paddingLeft: '14px', paddingRight: '14px' }}>
+                Brief Baru
               </Button>
             </Link>
           </div>
