@@ -1,14 +1,39 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Bell, MessageSquare, Search } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { currentUser } from "@/lib/mock-data"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export function Header() {
+  const router = useRouter()
   const [showNotifications, setShowNotifications] = useState(false)
   const [showMessages, setShowMessages] = useState(false)
+  const [user, setUser] = useState(currentUser)
+  const [isDemo, setIsDemo] = useState(false)
+
+  useEffect(() => {
+    // Check for demo user
+    if (typeof window !== 'undefined') {
+      const demoUserStr = localStorage.getItem('pitchflow_demo_user')
+      const isDemoMode = localStorage.getItem('pitchflow_is_demo')
+      if (demoUserStr && isDemoMode === 'true') {
+        const demoUser = JSON.parse(demoUserStr)
+        setUser(demoUser)
+        setIsDemo(true)
+      }
+    }
+  }, [])
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('pitchflow_demo_user')
+      localStorage.removeItem('pitchflow_is_demo')
+    }
+    router.push('/login')
+  }
 
   const notifications = [
     { id: 1, title: "Brief baru dari Sales", desc: "Wardah - Sinetron Ramadan", time: "5 menit lalu", unread: true },
@@ -324,19 +349,54 @@ export function Header() {
             <Avatar style={{ width: '36px', height: '36px' }}>
               <AvatarFallback
                 style={{
-                  backgroundColor: '#2563eb',
+                  backgroundColor: isDemo ? '#16a34a' : '#2563eb',
                   color: 'white',
                   fontSize: '12px',
                   fontWeight: 600,
                 }}
               >
-                {currentUser.name.split(' ').map(n => n[0]).join('')}
+                {user.name.split(' ').map(n => n[0]).join('')}
               </AvatarFallback>
             </Avatar>
             <div style={{ textAlign: 'left' }}>
-              <p style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', margin: 0 }}>{currentUser.name}</p>
-              <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{currentUser.role}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <p style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', margin: 0 }}>{user.name}</p>
+                {isDemo && (
+                  <span style={{
+                    fontSize: '10px',
+                    padding: '2px 6px',
+                    backgroundColor: '#dcfce7',
+                    color: '#16a34a',
+                    borderRadius: '4px',
+                    fontWeight: 600
+                  }}>
+                    DEMO
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{user.role}</p>
             </div>
+            <button
+              onClick={handleLogout}
+              style={{
+                marginLeft: '8px',
+                padding: '8px',
+                backgroundColor: '#fef2f2',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              title="Logout"
+            >
+              <svg style={{ width: '16px', height: '16px' }} viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
           </div>
         </div>
       </div>

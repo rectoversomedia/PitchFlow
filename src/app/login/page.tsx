@@ -1,6 +1,6 @@
 "use client"
 
-import { signIn } from "next-auth/react"
+import { signIn, useSession } from "next-auth/react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -12,7 +12,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [isDemoLoading, setIsDemoLoading] = useState(false)
   const [error, setError] = useState("")
+  const [googleError, setGoogleError] = useState("")
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,8 +42,45 @@ export default function LoginPage() {
   }
 
   const handleGoogleLogin = async () => {
-    setIsLoading(true)
-    await signIn("google", { callbackUrl: "/dashboard" })
+    setIsGoogleLoading(true)
+    setGoogleError("")
+
+    try {
+      await signIn("google", { callbackUrl: "/dashboard" })
+    } catch (error) {
+      console.error("Google login error:", error)
+      setGoogleError("Google OAuth belum dikonfigurasi. Gunakan 'Try Demo' untuk mencoba aplikasi.")
+      setIsGoogleLoading(false)
+    }
+  }
+
+  const handleDemoLogin = async () => {
+    setIsDemoLoading(true)
+
+    // Demo login - set mock session and redirect
+    try {
+      // Create demo session storage
+      const demoUser = {
+        id: "demo-user-1",
+        name: "Demo User",
+        email: "demo@pitchflow.app",
+        role: "Supervisor"
+      }
+
+      // Store in localStorage for demo purposes
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('pitchflow_demo_user', JSON.stringify(demoUser))
+        localStorage.setItem('pitchflow_is_demo', 'true')
+      }
+
+      // Small delay for UX
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      router.push('/dashboard')
+    } catch (error) {
+      console.error("Demo login error:", error)
+      setIsDemoLoading(false)
+    }
   }
 
   return (
@@ -259,7 +299,7 @@ export default function LoginPage() {
                       </svg>
                     ) : (
                       <svg style={{ width: 20, height: 20, color: '#94a3b8' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8-11-8-11-8-11-8-11-8-11-8-11-8-11-8-11-8-11-8z"/>
                         <circle cx="12" cy="12" r="3"/>
                       </svg>
                     )}
@@ -323,14 +363,14 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleGoogleLogin}
-              disabled={isLoading}
+              disabled={isGoogleLoading}
               style={{
                 width: '100%',
                 height: 48,
                 background: 'white',
                 border: '1px solid #e2e8f0',
                 borderRadius: 12,
-                cursor: isLoading ? 'not-allowed' : 'pointer',
+                cursor: isGoogleLoading ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -340,17 +380,104 @@ export default function LoginPage() {
                 color: '#334155',
                 transition: 'all 0.2s',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                opacity: isLoading ? 0.6 : 1
+                opacity: isGoogleLoading ? 0.6 : 1
               }}
             >
-              <svg style={{ width: 20, height: 20 }} viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              Masuk dengan Google
+              {isGoogleLoading ? (
+                <svg style={{ width: 20, height: 20, animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
+                  <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              ) : (
+                <svg style={{ width: 20, height: 20 }} viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+              )}
+              {isGoogleLoading ? 'Memproses...' : 'Masuk dengan Google'}
             </button>
+
+            {/* Google Error Message */}
+            {googleError && (
+              <div style={{
+                padding: '10px 12px',
+                background: '#fef3c7',
+                border: '1px solid #fcd34d',
+                borderRadius: 8,
+                marginTop: 12,
+                fontSize: 12,
+                color: '#92400e',
+                textAlign: 'center'
+              }}>
+                {googleError}
+              </div>
+            )}
+
+            {/* Try Demo Button - GREEN */}
+            <button
+              type="button"
+              onClick={handleDemoLogin}
+              disabled={isDemoLoading}
+              style={{
+                width: '100%',
+                height: 48,
+                background: isDemoLoading ? '#15803d' : '#16a34a',
+                border: 'none',
+                borderRadius: 12,
+                cursor: isDemoLoading ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                fontSize: 14,
+                fontWeight: 600,
+                color: 'white',
+                transition: 'all 0.2s',
+                marginTop: 16,
+                boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                if (!isDemoLoading) {
+                  e.currentTarget.style.backgroundColor = '#15803d'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isDemoLoading) {
+                  e.currentTarget.style.backgroundColor = '#16a34a'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                }
+              }}
+            >
+              {isDemoLoading ? (
+                <>
+                  <svg style={{ width: 20, height: 20, animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
+                    <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  Memuat Demo...
+                </>
+              ) : (
+                <>
+                  <svg style={{ width: 20, height: 20 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  Try Demo
+                </>
+              )}
+            </button>
+
+            {/* Demo Info */}
+            <div style={{
+              textAlign: 'center',
+              marginTop: 12,
+              fontSize: 11,
+              color: '#94a3b8'
+            }}>
+              Demo menggunakan data sample untuk coba aplikasi tanpa login
+            </div>
           </div>
 
           {/* Footer */}
