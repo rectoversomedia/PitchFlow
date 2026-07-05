@@ -1,39 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Bell, MessageSquare, Search } from "lucide-react"
+import { useState } from "react"
+import { Bell, MessageSquare, Search, LogOut } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { currentUser } from "@/lib/mock-data"
-import Link from "next/link"
+import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 
 export function Header() {
   const router = useRouter()
+  const { user, userType, logout } = useAuth()
   const [showNotifications, setShowNotifications] = useState(false)
   const [showMessages, setShowMessages] = useState(false)
-  const [user, setUser] = useState(currentUser)
-  const [isDemo, setIsDemo] = useState(false)
-
-  useEffect(() => {
-    // Check for demo user
-    if (typeof window !== 'undefined') {
-      const demoUserStr = localStorage.getItem('pitchflow_demo_user')
-      const isDemoMode = localStorage.getItem('pitchflow_is_demo')
-      if (demoUserStr && isDemoMode === 'true') {
-        const demoUser = JSON.parse(demoUserStr)
-        setUser(demoUser)
-        setIsDemo(true)
-      }
-    }
-  }, [])
-
-  const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('pitchflow_demo_user')
-      localStorage.removeItem('pitchflow_is_demo')
-    }
-    router.push('/login')
-  }
+  const [showUserMenu, setShowUserMenu] = useState(false)
 
   const notifications = [
     { id: 1, title: "Brief baru dari Sales", desc: "Wardah - Sinetron Ramadan", time: "5 menit lalu", unread: true },
@@ -51,6 +30,24 @@ export function Header() {
 
   const unreadCount = notifications.filter(n => n.unread).length
   const unreadMessages = messages.filter(m => m.unread).length
+
+  const handleLogout = () => {
+    logout()
+    router.push('/login')
+  }
+
+  const getUserInitials = () => {
+    if (!user?.name) return 'U'
+    return user.name.split(' ').map(n => n[0]).join('').substring(0, 2)
+  }
+
+  const getRoleBadgeColor = () => {
+    if (userType === 'demo') return { bg: '#dcfce7', color: '#16a34a', text: 'DEMO' }
+    if (userType === 'new') return { bg: '#dbeafe', color: '#2563eb', text: 'NEW' }
+    return { bg: '#f3e8ff', color: '#7c3aed', text: user?.role?.toUpperCase() || 'USER' }
+  }
+
+  const roleBadge = getRoleBadgeColor()
 
   return (
     <header
@@ -111,6 +108,7 @@ export function Header() {
               onClick={() => {
                 setShowNotifications(!showNotifications)
                 setShowMessages(false)
+                setShowUserMenu(false)
               }}
               style={{
                 position: 'relative',
@@ -224,6 +222,7 @@ export function Header() {
               onClick={() => {
                 setShowMessages(!showMessages)
                 setShowNotifications(false)
+                setShowUserMenu(false)
               }}
               style={{
                 position: 'relative',
@@ -337,66 +336,99 @@ export function Header() {
           </div>
 
           {/* User Menu */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              paddingLeft: '12px',
-              borderLeft: '1px solid #e2e8f0',
-            }}
-          >
-            <Avatar style={{ width: '36px', height: '36px' }}>
-              <AvatarFallback
-                style={{
-                  backgroundColor: isDemo ? '#16a34a' : '#2563eb',
-                  color: 'white',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                }}
-              >
-                {user.name.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
-            </Avatar>
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <p style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', margin: 0 }}>{user.name}</p>
-                {isDemo && (
-                  <span style={{
-                    fontSize: '10px',
-                    padding: '2px 6px',
-                    backgroundColor: '#dcfce7',
-                    color: '#16a34a',
-                    borderRadius: '4px',
-                    fontWeight: 600
-                  }}>
-                    DEMO
-                  </span>
-                )}
-              </div>
-              <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{user.role}</p>
-            </div>
+          <div style={{ position: 'relative' }}>
             <button
-              onClick={handleLogout}
+              onClick={() => {
+                setShowUserMenu(!showUserMenu)
+                setShowNotifications(false)
+                setShowMessages(false)
+              }}
               style={{
-                marginLeft: '8px',
-                padding: '8px',
-                backgroundColor: '#fef2f2',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                gap: '12px',
+                padding: '8px 12px',
+                paddingLeft: '12px',
+                borderLeft: '1px solid #e2e8f0',
+                border: 'none',
+                backgroundColor: showUserMenu ? '#f1f5f9' : 'transparent',
+                borderRadius: '12px',
+                cursor: 'pointer',
               }}
-              title="Logout"
             >
-              <svg style={{ width: '16px', height: '16px' }} viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
+              <Avatar style={{ width: '36px', height: '36px' }}>
+                <AvatarFallback
+                  style={{
+                    backgroundColor: roleBadge.color,
+                    color: 'white',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                  }}
+                >
+                  {getUserInitials()}
+                </AvatarFallback>
+              </Avatar>
+              <div style={{ textAlign: 'left' }}>
+                <p style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', margin: 0 }}>{user?.name || 'User'}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 600, color: roleBadge.color, backgroundColor: roleBadge.bg, padding: '2px 6px', borderRadius: '4px' }}>
+                    {roleBadge.text}
+                  </span>
+                </div>
+              </div>
             </button>
+
+            {/* User Menu Dropdown */}
+            {showUserMenu && (
+              <>
+                <div
+                  onClick={() => setShowUserMenu(false)}
+                  style={{ position: 'fixed', inset: 0, zIndex: 50 }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: '8px',
+                    width: '240px',
+                    backgroundColor: 'white',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                    border: '1px solid #e2e8f0',
+                    zIndex: 51,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div style={{ padding: '16px', borderBottom: '1px solid #f1f5f9' }}>
+                    <p style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', margin: '0 0 4px 0' }}>{user?.name || 'User'}</p>
+                    <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{user?.email || 'demo@pitchflow.app'}</p>
+                  </div>
+                  <div style={{ padding: '8px' }}>
+                    <button
+                      onClick={handleLogout}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        color: '#dc2626',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      <LogOut size={18} />
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

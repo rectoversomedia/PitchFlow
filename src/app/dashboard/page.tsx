@@ -5,6 +5,7 @@ import { MainLayout } from "@/components/layout/MainLayout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { proposals as mockProposals, statusLabels, salesComments } from "@/lib/mock-data"
+import { useAuth } from "@/lib/auth-context"
 import {
   FileText,
   TrendingUp,
@@ -19,36 +20,81 @@ import {
   Zap,
   Rocket,
   Lightbulb,
-  Sparkles,
+  Eye,
+  X,
+  Filter,
+  Building,
+  Calendar,
+  Loader2,
+  LogOut,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 export default function DashboardPage() {
   const router = useRouter()
-  const [proposals, setProposals] = useState<any[]>([])
+  const { user, userType, logout } = useAuth()
+  const [selectedProposal, setSelectedProposal] = useState<string | null>(null)
+  const [proposals, setProposals] = useState(mockProposals)
   const [briefs, setBriefs] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [currentUser, setCurrentUser] = useState<any>(null)
-  const [userType, setUserType] = useState<string>('demo')
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const session = localStorage.getItem('pitchflow_session')
-      const type = localStorage.getItem('pitchflow_user_type') || 'demo'
-      setUserType(type)
-      if (session) setCurrentUser(JSON.parse(session))
+  // Get user display name
+  const getUserName = () => {
+    if (user?.name) return user.name.split(" ")[0]
+    return 'User'
+  }
+
+  // Get greeting based on user type
+  const getGreeting = () => {
+    switch (userType) {
+      case 'demo':
+        return 'Demo mode - Data sample untuk percobaan'
+      case 'new':
+        return 'Mulai workflow baru dengan data kosong'
+      case 'existing':
+        return 'Berikut ringkasan pipeline proposal sponsorship Anda'
+      default:
+        return 'Berikut ringkasan pipeline proposal sponsorship Anda'
     }
-  }, [])
+  }
 
+  // Get KPI data based on user type
+  const getKpiCards = () => {
+    if (userType === 'demo') {
+      return [
+        { title: "New Briefs", value: 7, change: "+16%", icon: FileText, bgColor: "#dbeafe", iconColor: "#2563eb", borderColor: "#93c5fd", href: "/brief-intake?status=new" },
+        { title: "In Progress", value: 18, change: "+12%", icon: TrendingUp, bgColor: "#fef3c7", iconColor: "#d97706", borderColor: "#fcd34d", href: "/brief-intake?status=in_progress" },
+        { title: "Waiting Feedback", value: 9, change: "+29%", icon: Clock, bgColor: "#f3e8ff", iconColor: "#9333ea", borderColor: "#c4b5fd", href: "/sales-review?status=waiting" },
+        { title: "Ready for Sales", value: 11, change: "+10%", icon: CheckCircle, bgColor: "#dcfce7", iconColor: "#16a34a", borderColor: "#86efac", href: "/sales-review?status=ready" },
+      ]
+    }
+    if (userType === 'new') {
+      return [
+        { title: "New Briefs", value: 0, change: "0%", icon: FileText, bgColor: "#dbeafe", iconColor: "#2563eb", borderColor: "#93c5fd", href: "/brief-intake?status=new" },
+        { title: "In Progress", value: 0, change: "0%", icon: TrendingUp, bgColor: "#fef3c7", iconColor: "#d97706", borderColor: "#fcd34d", href: "/brief-intake?status=in_progress" },
+        { title: "Waiting Feedback", value: 0, change: "0%", icon: Clock, bgColor: "#f3e8ff", iconColor: "#9333ea", borderColor: "#c4b5fd", href: "/sales-review?status=waiting" },
+        { title: "Ready for Sales", value: 0, change: "0%", icon: CheckCircle, bgColor: "#dcfce7", iconColor: "#16a34a", borderColor: "#86efac", href: "/sales-review?status=ready" },
+      ]
+    }
+    // existing user - show real data
+    return [
+      { title: "New Briefs", value: briefs.filter(b => b.status === 'new').length, change: "", icon: FileText, bgColor: "#dbeafe", iconColor: "#2563eb", borderColor: "#93c5fd", href: "/brief-intake?status=new" },
+      { title: "In Progress", value: briefs.filter(b => b.status === 'in_progress').length, change: "", icon: TrendingUp, bgColor: "#fef3c7", iconColor: "#d97706", borderColor: "#fcd34d", href: "/brief-intake?status=in_progress" },
+      { title: "Waiting Feedback", value: proposals.filter(p => p.status === 'need_input').length, change: "", icon: Clock, bgColor: "#f3e8ff", iconColor: "#9333ea", borderColor: "#c4b5fd", href: "/sales-review?status=waiting" },
+      { title: "Ready for Sales", value: proposals.filter(p => p.status === 'ready').length, change: "", icon: CheckCircle, bgColor: "#dcfce7", iconColor: "#16a34a", borderColor: "#86efac", href: "/sales-review?status=ready" },
+    ]
+  }
+
+  const kpiCards = getKpiCards()
+
+  // Fetch real data from Supabase
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const type = localStorage.getItem('pitchflow_user_type') || 'demo'
     async function fetchData() {
       try {
         if (userType === 'demo') {
           setProposals(mockProposals)
-          setBriefs(mockData.briefs)
         } else if (userType === 'new') {
           setProposals([])
           setBriefs([])
@@ -67,42 +113,8 @@ export default function DashboardPage() {
       }
     }
     fetchData()
-  }, [])
+  }, [userType])
 
-  const mockData = {
-    briefs: [
-      { id: "brief-1", brand_name: "Wardah", program: "Sinetron Ramadan", status: "new", created_at: "2025-05-19" },
-      { id: "brief-2", brand_name: "OPPO", program: "Sinetron", status: "in_progress", created_at: "2025-05-18" },
-      { id: "brief-3", brand_name: "Indomie", program: "Reality Show", status: "in_review", created_at: "2025-05-17" },
-    ]
-  }
-
-  const getKpiCards = () => {
-    if (userType === 'demo') {
-      return [
-        { title: "New Briefs", value: 7, change: "+16%", icon: FileText, bgColor: "#dbeafe", iconColor: "#2563eb", borderColor: "#93c5fd", href: "/brief-intake?status=new" },
-        { title: "In Progress", value: 18, change: "+12%", icon: TrendingUp, bgColor: "#fef3c7", iconColor: "#d97706", borderColor: "#fcd34d", href: "/brief-intake?status=in_progress" },
-        { title: "Waiting Feedback", value: 9, change: "+29%", icon: Clock, bgColor: "#f3e8ff", iconColor: "#9333ea", borderColor: "#c4b5fd", href: "/sales-review?status=waiting" },
-        { title: "Ready for Sales", value: 11, change: "+10%", icon: CheckCircle, bgColor: "#dcfce7", iconColor: "#16a34a", borderColor: "#86efac", href: "/sales-review?status=ready" },
-      ]
-    }
-    if (userType === 'new') {
-      return [
-        { title: "New Briefs", value: 0, change: "0%", icon: FileText, bgColor: "#dbeafe", iconColor: "#2563eb", borderColor: "#93c5fd", href: "/brief-intake?status=new" },
-        { title: "In Progress", value: 0, change: "0%", icon: TrendingUp, bgColor: "#fef3c7", iconColor: "#d97706", borderColor: "#fcd34d", href: "/brief-intake?status=in_progress" },
-        { title: "Waiting Feedback", value: 0, change: "0%", icon: Clock, bgColor: "#f3e8ff", iconColor: "#9333ea", borderColor: "#c4b5fd", href: "/sales-review?status=waiting" },
-        { title: "Ready for Sales", value: 0, change: "0%", icon: CheckCircle, bgColor: "#dcfce7", iconColor: "#16a34a", borderColor: "#86efac", href: "/sales-review?status=ready" },
-      ]
-    }
-    return [
-      { title: "New Briefs", value: briefs.filter(b => b.status === 'new').length, change: "", icon: FileText, bgColor: "#dbeafe", iconColor: "#2563eb", borderColor: "#93c5fd", href: "/brief-intake?status=new" },
-      { title: "In Progress", value: briefs.filter(b => b.status === 'in_progress').length, change: "", icon: TrendingUp, bgColor: "#fef3c7", iconColor: "#d97706", borderColor: "#fcd34d", href: "/brief-intake?status=in_progress" },
-      { title: "Waiting Feedback", value: proposals.filter(p => p.status === 'need_input').length, change: "", icon: Clock, bgColor: "#f3e8ff", iconColor: "#9333ea", borderColor: "#c4b5fd", href: "/sales-review?status=waiting" },
-      { title: "Ready for Sales", value: proposals.filter(p => p.status === 'ready').length, change: "", icon: CheckCircle, bgColor: "#dcfce7", iconColor: "#16a34a", borderColor: "#86efac", href: "/sales-review?status=ready" },
-    ]
-  }
-
-  const kpiCards = getKpiCards()
   const pipelineStages = [
     { id: "new_brief", title: "New Brief", color: "#2563eb", bgColor: "#eff6ff" },
     { id: "drafting", title: "Drafting", color: "#ea580c", bgColor: "#fff7ed" },
@@ -134,13 +146,19 @@ export default function DashboardPage() {
       <div style={{ fontFamily: "'Inter', sans-serif" }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <div>
-            <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>
-              Selamat datang, {currentUser?.name?.split(" ")[0] || 'User'}! 👋</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>
+                Selamat datang, {getUserName()}! 👋
+              </h1>
+              {userType === 'demo' && (
+                <Badge variant="green" style={{ fontSize: '10px' }}>DEMO</Badge>
+              )}
+              {userType === 'new' && (
+                <Badge variant="blue" style={{ fontSize: '10px' }}>NEW</Badge>
+              )}
+            </div>
             <p style={{ fontSize: '14px', color: '#64748b' }}>
-              {userType === 'demo' && 'Demo mode - Data sample untuk percobaan'}
-              {userType === 'new' && 'Mulai workflow baru dengan data kosong'}
-              {userType === 'existing' && 'Berikut ringkasan pipeline proposal sponsorship Anda'}
-              {!userType && 'Berikut ringkasan pipeline proposal sponsorship Anda'}
+              {getGreeting()}
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -154,6 +172,15 @@ export default function DashboardPage() {
                 Brief Baru
               </Button>
             </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { logout(); router.push('/login') }}
+              style={{ border: '1px solid #fecaca', backgroundColor: 'white', paddingLeft: '14px', paddingRight: '14px', color: '#dc2626' }}
+            >
+              <LogOut size={16} style={{ marginRight: '8px' }} />
+              Logout
+            </Button>
           </div>
         </div>
 
@@ -253,7 +280,7 @@ export default function DashboardPage() {
 
           <div style={{ background: 'linear-gradient(180deg, #ffffff, #fafafa)', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-              <Sparkles size={20} color="#7c3aed" />
+              <Lightbulb size={20} color="#7c3aed" />
               <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>AI Suggestions</h3>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

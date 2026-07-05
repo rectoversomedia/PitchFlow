@@ -1,105 +1,66 @@
 "use client"
 
-import { signIn, useSession } from "next-auth/react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
+import { useAuth } from "@/lib/auth-context"
+import { UserType } from "@/lib/auth-utils"
 
 type UserType = 'demo' | 'new' | 'existing'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { login, isLoading } = useAuth()
+  const [selectedType, setSelectedType] = useState<UserType>('demo')
   const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const [isDemoLoading, setIsDemoLoading] = useState(false)
-  const [selectedUserType, setSelectedUserType] = useState<UserType>('demo')
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [error, setError] = useState("")
   const [googleError, setGoogleError] = useState("")
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  const handleLogin = async () => {
+    setIsLoggingIn(true)
     setError("")
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      })
-
-      if (result?.ok) {
-        router.push('/dashboard')
-      } else {
-        setError("Email atau password salah")
-        setIsLoading(false)
-      }
-    } catch {
-      setError("Terjadi kesalahan")
-      setIsLoading(false)
-    }
-  }
-
-  const handleGoogleLogin = async () => {
-    setIsGoogleLoading(true)
-    setGoogleError("")
-
-    try {
-      await signIn("google", { callbackUrl: "/dashboard" })
-    } catch (error) {
-      console.error("Google login error:", error)
-      setGoogleError("Google OAuth belum dikonfigurasi. Gunakan 'Try Demo' untuk mencoba aplikasi.")
-      setIsGoogleLoading(false)
-    }
-  }
-
-  const handleDemoLogin = async () => {
-    setIsDemoLoading(true)
-
-    try {
-      // Create session based on user type
-      const userData: Record<UserType, any> = {
-        demo: {
-          id: "demo-user-1",
-          name: "Demo User",
-          email: "demo@pitchflow.app",
-          role: "Supervisor",
-          userType: 'demo'
-        },
-        new: {
-          id: "new-user-1",
-          name: "New User",
-          email: email || "newuser@pitchflow.app",
-          role: "Sales",
-          userType: 'new'
-        },
-        existing: {
-          id: "existing-user-1",
-          name: "Fajar Pahlawan H.",
-          email: email || "fajar.p@rectoverso.com",
-          role: "Supervisor",
-          userType: 'existing'
-        }
-      }
-
-      const sessionData = userData[selectedUserType]
-
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('pitchflow_session', JSON.stringify(sessionData))
-        localStorage.setItem('pitchflow_user_type', selectedUserType)
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await login(selectedType, email || undefined)
       router.push('/dashboard')
-    } catch (error) {
-      console.error("Demo login error:", error)
-      setIsDemoLoading(false)
+    } catch (err) {
+      setError("Login gagal. Silakan coba lagi.")
+      console.error('Login error:', err)
+    } finally {
+      setIsLoggingIn(false)
     }
   }
+
+  const userTypes = [
+    {
+      id: 'demo' as UserType,
+      label: 'Demo User',
+      desc: 'Data sample untuk percobaan',
+      color: '#16a34a',
+      bg: 'rgba(22, 163, 74, 0.1)',
+      border: '#16a34a',
+    },
+    {
+      id: 'new' as UserType,
+      label: 'New User',
+      desc: 'Workspace kosong baru',
+      color: '#2563eb',
+      bg: 'rgba(37, 99, 235, 0.1)',
+      border: '#2563eb',
+    },
+    {
+      id: 'existing' as UserType,
+      label: 'Existing User',
+      desc: 'Data real dari database',
+      color: '#7c3aed',
+      bg: 'rgba(124, 58, 237, 0.1)',
+      border: '#7c3aed',
+    },
+  ]
+
+  const currentType = userTypes.find(t => t.id === selectedType)!
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
@@ -184,7 +145,7 @@ export default function LoginPage() {
           background: 'linear-gradient(180deg, #f8fafc 0%, white 100%)'
         }}
       >
-        <div style={{ width: '100%', maxWidth: 420 }}>
+        <div style={{ width: '100%', maxWidth: 480 }}>
           {/* Logo Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 32 }}>
             <Image src="/pitchflow logo (normal).png" alt="PitchFlow" width={180} height={50} style={{ objectFit: 'contain' }} />
@@ -199,9 +160,9 @@ export default function LoginPage() {
             border: '1px solid #f1f5f9'
           }}>
             {/* Header */}
-            <div style={{ marginBottom: 32 }}>
+            <div style={{ marginBottom: 24 }}>
               <h2 style={{ fontSize: 24, fontWeight: 'bold', color: '#0f172a' }}>Selamat datang!</h2>
-              <p style={{ color: '#64748b', fontSize: 14, marginTop: 6 }}>Masuk ke akun Anda untuk melanjutkan</p>
+              <p style={{ color: '#64748b', fontSize: 14, marginTop: 6 }}>Pilih tipe user untuk melanjutkan</p>
             </div>
 
             {error && (
@@ -210,11 +171,49 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Form */}
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {/* Email Field */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <label style={{ fontSize: 14, fontWeight: 500, color: '#334155' }}>Email</label>
+            {/* User Type Selection */}
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 10 }}>
+                Pilih Tipe User
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                {userTypes.map((type) => (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => setSelectedType(type.id)}
+                    style={{
+                      padding: '14px 10px',
+                      borderRadius: 12,
+                      border: selectedType === type.id ? `2px solid ${type.border}` : '2px solid #e2e8f0',
+                      background: selectedType === type.id ? type.bg : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: selectedType === type.id ? type.color : '#64748b',
+                      marginBottom: 4
+                    }}>
+                      {type.label}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#94a3b8' }}>
+                      {type.desc}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Email Field (for existing user) */}
+            {selectedType === 'existing' && (
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 8 }}>
+                  Email (opsional)
+                </label>
                 <div style={{ position: 'relative' }}>
                   <div style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', zIndex: 1, pointerEvents: 'none' }}>
                     <svg style={{ width: 20, height: 20, color: '#94a3b8' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
@@ -223,7 +222,7 @@ export default function LoginPage() {
                   </div>
                   <input
                     type="email"
-                    placeholder="nama@rectoverso.com"
+                    placeholder="email@rectoverso.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     style={{
@@ -240,271 +239,62 @@ export default function LoginPage() {
                       transition: 'all 0.2s',
                       boxSizing: 'border-box'
                     }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#2563eb';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#e2e8f0';
-                      e.target.style.boxShadow = 'none';
-                    }}
-                    required
                   />
                 </div>
-              </div>
-
-              {/* Password Field */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <label style={{ fontSize: 14, fontWeight: 500, color: '#334155' }}>Password</label>
-                <div style={{ position: 'relative' }}>
-                  <div style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', zIndex: 1, pointerEvents: 'none' }}>
-                    <svg style={{ width: 20, height: 20, color: '#94a3b8' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                      <path d="M7 11V7a5 5 0 0110 0v4"/>
-                    </svg>
-                  </div>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Masukkan password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    style={{
-                      width: '100%',
-                      height: 48,
-                      paddingLeft: 48,
-                      paddingRight: 48,
-                      background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: 12,
-                      fontSize: 14,
-                      color: '#0f172a',
-                      outline: 'none',
-                      transition: 'all 0.2s',
-                      boxSizing: 'border-box'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#2563eb';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#e2e8f0';
-                      e.target.style.boxShadow = 'none';
-                    }}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: 14,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      zIndex: 1
-                    }}
-                  >
-                    {showPassword ? (
-                      <svg style={{ width: 20, height: 20, color: '#94a3b8' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
-                        <line x1="1" y1="1" x2="23" y2="23"/>
-                      </svg>
-                    ) : (
-                      <svg style={{ width: 20, height: 20, color: '#94a3b8' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8-11-8-11-8-11-8-11-8-11-8-11-8-11-8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                      </svg>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Forgot Password */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -4 }}>
-                <Link href="/forgot-password" style={{ fontSize: 14, color: '#2563eb', fontWeight: 500, textDecoration: 'none' }}>
-                  Lupa password?
-                </Link>
-              </div>
-
-              {/* Login Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                style={{
-                  width: '100%',
-                  height: 48,
-                  background: isLoading ? '#1d4ed8' : '#2563eb',
-                  color: 'white',
-                  fontWeight: 600,
-                  borderRadius: 12,
-                  border: 'none',
-                  cursor: isLoading ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  fontSize: 14,
-                  transition: 'all 0.2s',
-                  marginTop: 8,
-                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
-                }}
-              >
-                {isLoading ? (
-                  <>
-                    <svg style={{ width: 20, height: 20, animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
-                      <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                    </svg>
-                    Memproses...
-                  </>
-                ) : (
-                  "Masuk"
-                )}
-              </button>
-            </form>
-
-            {/* Divider */}
-            <div style={{ position: 'relative', padding: '12px 0' }}>
-              <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, background: '#e2e8f0' }} />
-              <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-                <span style={{ background: 'white', padding: '0 16px', fontSize: 12, color: '#94a3b8' }}>atau</span>
-              </div>
-            </div>
-
-            {/* Google Login */}
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              disabled={isGoogleLoading}
-              style={{
-                width: '100%',
-                height: 48,
-                background: 'white',
-                border: '1px solid #e2e8f0',
-                borderRadius: 12,
-                cursor: isGoogleLoading ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 12,
-                fontSize: 14,
-                fontWeight: 500,
-                color: '#334155',
-                transition: 'all 0.2s',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                opacity: isGoogleLoading ? 0.6 : 1
-              }}
-            >
-              {isGoogleLoading ? (
-                <svg style={{ width: 20, height: 20, animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
-                  <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                </svg>
-              ) : (
-                <svg style={{ width: 20, height: 20 }} viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-              )}
-              {isGoogleLoading ? 'Memproses...' : 'Masuk dengan Google'}
-            </button>
-
-            {/* Google Error Message */}
-            {googleError && (
-              <div style={{
-                padding: '10px 12px',
-                background: '#fef3c7',
-                border: '1px solid #fcd34d',
-                borderRadius: 8,
-                marginTop: 12,
-                fontSize: 12,
-                color: '#92400e',
-                textAlign: 'center'
-              }}>
-                {googleError}
               </div>
             )}
 
-            {/* User Type Selection */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 10 }}>
-                Pilih Tipe User
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                {[
-                  { id: 'demo', label: 'Demo', desc: 'Data sample', color: '#16a34a' },
-                  { id: 'new', label: 'New User', desc: 'Data kosong', color: '#2563eb' },
-                  { id: 'existing', label: 'Existing', desc: 'Data real', color: '#7c3aed' },
-                ].map((type) => (
-                  <button
-                    key={type.id}
-                    type="button"
-                    onClick={() => setSelectedUserType(type.id as UserType)}
-                    style={{
-                      padding: '12px 8px',
-                      borderRadius: 10,
-                      border: selectedUserType === type.id ? `2px solid ${type.color}` : '2px solid #e2e8f0',
-                      background: selectedUserType === type.id ? `${type.color}10` : 'white',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      textAlign: 'center',
-                    }}
-                  >
-                    <div style={{ fontSize: 12, fontWeight: 600, color: selectedUserType === type.id ? type.color : '#64748b', marginBottom: 2 }}>
-                      {type.label}
-                    </div>
-                    <div style={{ fontSize: 10, color: '#94a3b8' }}>
-                      {type.desc}
-                    </div>
-                  </button>
-                ))}
-              </div>
+            {/* Info Box */}
+            <div style={{
+              padding: '12px 16px',
+              background: currentType.bg,
+              border: `1px solid ${currentType.border}40`,
+              borderRadius: 10,
+              marginBottom: 20,
+            }}>
+              <p style={{ fontSize: 12, color: '#475569', lineHeight: 1.5 }}>
+                {selectedType === 'demo' && 'Demo menggunakan data sample untuk coba aplikasi tanpa login. Cocok untuk preview fitur.'}
+                {selectedType === 'new' && 'New user akan mulai dengan workspace kosong. Data akan tersimpan saat Anda membuat brief/proposal.'}
+                {selectedType === 'existing' && 'Login dengan data real dari database Supabase. Hubungi admin jika belum punya akun.'}
+              </p>
             </div>
 
-            {/* Try Demo Button - GREEN */}
+            {/* Login Button */}
             <button
               type="button"
-              onClick={handleDemoLogin}
-              disabled={isDemoLoading}
+              onClick={handleLogin}
+              disabled={isLoggingIn || isLoading}
               style={{
                 width: '100%',
-                height: 48,
-                background: isDemoLoading ? '#15803d' : '#16a34a',
-                border: 'none',
+                height: 52,
+                background: isLoggingIn ? currentType.color : currentType.color,
+                color: 'white',
+                fontWeight: 600,
                 borderRadius: 12,
-                cursor: isDemoLoading ? 'not-allowed' : 'pointer',
+                border: 'none',
+                cursor: isLoggingIn ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 10,
-                fontSize: 14,
-                fontWeight: 600,
-                color: 'white',
+                fontSize: 15,
                 transition: 'all 0.2s',
-                boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3)'
+                boxShadow: `0 4px 12px ${currentType.color}30`
               }}
               onMouseEnter={(e) => {
-                if (!isDemoLoading) {
-                  e.currentTarget.style.backgroundColor = '#15803d'
+                if (!isLoggingIn) {
                   e.currentTarget.style.transform = 'translateY(-1px)'
+                  e.currentTarget.style.boxShadow = `0 6px 16px ${currentType.color}40`
                 }
               }}
               onMouseLeave={(e) => {
-                if (!isDemoLoading) {
-                  e.currentTarget.style.backgroundColor = '#16a34a'
+                if (!isLoggingIn) {
                   e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = `0 4px 12px ${currentType.color}30`
                 }
               }}
             >
-              {isDemoLoading ? (
+              {isLoggingIn ? (
                 <>
                   <svg style={{ width: 20, height: 20, animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
                     <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
@@ -514,38 +304,32 @@ export default function LoginPage() {
                 </>
               ) : (
                 <>
-                  <svg style={{ width: 20, height: 20 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="5 3 19 12 5 21 5 3"/>
-                  </svg>
-                  {selectedUserType === 'demo' ? 'Try Demo' : selectedUserType === 'new' ? 'Start New Workspace' : 'Login as Existing'}
+                  {selectedType === 'demo' && (
+                    <svg style={{ width: 20, height: 20 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                  )}
+                  {selectedType === 'new' && (
+                    <svg style={{ width: 20, height: 20 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                  )}
+                  {selectedType === 'existing' && (
+                    <svg style={{ width: 20, height: 20 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M13.8 12H3"/>
+                    </svg>
+                  )}
+                  {selectedType === 'demo' && 'Try Demo'}
+                  {selectedType === 'new' && 'Start New Workspace'}
+                  {selectedType === 'existing' && 'Login as Existing'}
                 </>
               )}
             </button>
-
-            {/* Demo Info */}
-            <div style={{
-              textAlign: 'center',
-              marginTop: 12,
-              fontSize: 11,
-              color: '#94a3b8'
-            }}>
-              {selectedUserType === 'demo' && 'Demo menggunakan data sample untuk coba aplikasi tanpa login'}
-              {selectedUserType === 'new' && 'New user akan mulai dengan data kosong'}
-              {selectedUserType === 'existing' && 'Login dengan data real dari database'}
-            </div>
           </div>
 
           {/* Footer */}
           <p style={{ textAlign: 'center', fontSize: 12, color: '#94a3b8', marginTop: 24 }}>
             © 2026 Rectoverso. Semua hak dilindungi.
-          </p>
-
-          {/* Sign Up Link */}
-          <p style={{ textAlign: 'center', fontSize: 14, color: '#64748b', marginTop: 16 }}>
-            Belum punya akun?{' '}
-            <Link href="/signup" style={{ color: '#2563eb', fontWeight: 500, textDecoration: 'none' }}>
-              Daftar sekarang
-            </Link>
           </p>
         </div>
       </div>

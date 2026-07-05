@@ -1,9 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Turbopack config
   turbopack: {
-    root: '/Users/fajarpahlawan/Documents/PitchFlow/pitchflow-app',
+    // Build configuration
   },
+  // Output directory
+  distDir: ".next",
 };
 
 export default nextConfig;
