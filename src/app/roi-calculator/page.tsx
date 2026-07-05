@@ -3,26 +3,21 @@
 import { useState } from "react"
 import { MainLayout } from "@/components/layout/MainLayout"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { LoadingPage } from "@/components/ui/loading"
 import {
   Calculator,
   TrendingUp,
-  DollarSign,
   Target,
   Users,
   BarChart3,
   PieChart,
-  AlertCircle,
+  Download,
   CheckCircle2,
+  AlertCircle,
   XCircle,
-  RefreshCw,
-  Download
+  Sparkles,
 } from "lucide-react"
 
 interface ROIResult {
@@ -30,12 +25,28 @@ interface ROIResult {
   cpe: number
   roi: number
   riskLevel: "low" | "medium" | "high"
-  justification: string
   recommendation: string
 }
 
+const programTypes = [
+  "Sinetron", "Reality Show", "Variety Show", "News Program",
+  "Sports Event", "Digital Campaign", "Podcast", "Social Media", "Concert"
+]
+
+const benchmarks = [
+  { industry: "Technology", avgCPM: "Rp 45.000", avgROI: "35%", potential: "High" },
+  { industry: "Beauty & Personal Care", avgCPM: "Rp 38.000", avgROI: "42%", potential: "Very High" },
+  { industry: "FMCG", avgCPM: "Rp 25.000", avgROI: "28%", potential: "Medium" },
+  { industry: "Automotive", avgCPM: "Rp 55.000", avgROI: "45%", potential: "High" },
+  { industry: "Fintech", avgCPM: "Rp 65.000", avgROI: "52%", potential: "Very High" },
+  { industry: "Food & Beverage", avgCPM: "Rp 30.000", avgROI: "32%", potential: "Medium" },
+]
+
 export default function ROICalculator() {
   const [loading, setLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState("calculator")
+
+  // Input State
   const [brandName, setBrandName] = useState("")
   const [programType, setProgramType] = useState("")
   const [budget, setBudget] = useState("")
@@ -44,27 +55,20 @@ export default function ROICalculator() {
   const [roiResult, setRoiResult] = useState<ROIResult | null>(null)
   const [analysisResult, setAnalysisResult] = useState<string | null>(null)
 
-  const programTypes = [
-    "Sinetron",
-    "Reality Show",
-    "Variety Show",
-    "News Program",
-    "Sports Event",
-    "Digital Campaign",
-    "Podcast",
-    "Social Media",
-    "Concert"
+  const tabs = [
+    { id: "calculator", label: "Calculator", icon: Calculator },
+    { id: "analysis", label: "AI Analysis", icon: BarChart3 },
+    { id: "benchmark", label: "Benchmarks", icon: PieChart },
   ]
 
   const quickCalculate = () => {
-    // Quick calculation based on inputs
     const budgetNum = parseFloat(budget.replace(/[^0-9]/g, '')) || 0
     const reachNum = parseFloat(expectedReach.replace(/[^0-9]/g, '')) || 0
 
     if (budgetNum && reachNum) {
       const cpm = (budgetNum / reachNum) * 1000
-      const estimatedImpressions = reachNum * 30 // Assume 30 days
-      const estimatedValue = estimatedImpressions * 0.01 // $0.01 per impression
+      const estimatedImpressions = reachNum * 30
+      const estimatedValue = estimatedImpressions * 0.01
       const roi = ((estimatedValue - budgetNum) / budgetNum) * 100
 
       let riskLevel: "low" | "medium" | "high" = "medium"
@@ -76,7 +80,6 @@ export default function ROICalculator() {
         cpe: cpm / 100,
         roi,
         riskLevel,
-        justification: `Based on budget ${budget} and expected reach of ${expectedReach}`,
         recommendation: roi > 30 ? "Highly recommended" : roi > 0 ? "Moderately recommended" : "Not recommended"
       })
     }
@@ -84,7 +87,6 @@ export default function ROICalculator() {
 
   const analyzeROI = async () => {
     if (!brandName || !programType || !budget) return
-
     setLoading(true)
     try {
       const response = await fetch('/api/ai', {
@@ -92,396 +94,506 @@ export default function ROICalculator() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'calculateROI',
-          params: {
-            brandName,
-            programType,
-            budget,
-            duration: duration || "3 months",
-            expectedReach: expectedReach || "To be determined"
-          }
+          params: { brandName, programType, budget, duration: duration || "3 months", expectedReach: expectedReach || "To be determined" }
         })
       })
-
       const data = await response.json()
-      if (data.success) {
-        setAnalysisResult(data.data)
-      }
-    } catch (error) {
-      console.error('ROI analysis failed:', error)
+      if (data.success) setAnalysisResult(data.data)
+    } catch (err) {
+      console.error('ROI analysis failed:', err)
     } finally {
       setLoading(false)
     }
   }
 
   const formatCurrency = (num: number) => {
-    if (num >= 1000000000) {
-      return `Rp ${(num / 1000000000).toFixed(1)}B`
-    }
-    if (num >= 1000000) {
-      return `Rp ${(num / 1000000).toFixed(0)}M`
-    }
-    if (num >= 1000) {
-      return `Rp ${(num / 1000).toFixed(0)}K`
-    }
+    if (num >= 1000000000) return `Rp ${(num / 1000000000).toFixed(1)}B`
+    if (num >= 1000000) return `Rp ${(num / 1000000).toFixed(0)}M`
+    if (num >= 1000) return `Rp ${(num / 1000).toFixed(0)}K`
     return `Rp ${num.toFixed(0)}`
   }
 
   const getRiskColor = (level: string) => {
     switch (level) {
-      case "low":
-        return "bg-green-500"
-      case "medium":
-        return "bg-amber-500"
-      case "high":
-        return "bg-red-500"
-      default:
-        return "bg-slate-500"
+      case "low": return { bg: '#dcfce7', border: '#86efac', text: '#16a34a' }
+      case "medium": return { bg: '#fef3c7', border: '#fcd34d', text: '#d97706' }
+      case "high": return { bg: '#fef2f2', border: '#fecaca', text: '#dc2626' }
+      default: return { bg: '#f1f5f9', border: '#e2e8f0', text: '#64748b' }
     }
   }
 
-  const getRiskBadge = (level: string) => {
-    switch (level) {
-      case "low":
-        return <Badge className="bg-green-100 text-green-700">Low Risk</Badge>
-      case "medium":
-        return <Badge className="bg-amber-100 text-amber-700">Medium Risk</Badge>
-      case "high":
-        return <Badge className="bg-red-100 text-red-700">High Risk</Badge>
-      default:
-        return <Badge>Unknown</Badge>
-    }
-  }
+  if (loading) return <LoadingPage />
 
   return (
     <MainLayout>
-      <div className="p-6 max-w-7xl mx-auto">
+      <div style={{ fontFamily: "'Inter', sans-serif" }}>
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-emerald-100 rounded-lg">
-              <Calculator className="w-6 h-6 text-emerald-600" />
-            </div>
-            <h1 className="text-3xl font-bold">ROI Calculator</h1>
-            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-              <TrendingUp className="w-3 h-3 mr-1" /> AI-Powered
-            </Badge>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+          <div>
+            <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ padding: '8px', backgroundColor: '#dcfce7', borderRadius: '10px' }}>
+                <Calculator size={20} color="#16a34a" />
+              </div>
+              ROI Calculator
+              <Badge variant="outline" style={{ fontSize: '11px', backgroundColor: '#dcfce7', color: '#16a34a', borderColor: '#86efac' }}>
+                <Sparkles size={10} style={{ marginRight: '4px' }} /> AI-Powered
+              </Badge>
+            </h1>
+            <p style={{ fontSize: '14px', color: '#64748b', marginLeft: '44px' }}>
+              Calculate dan analyze sponsorship ROI dengan AI
+            </p>
           </div>
-          <p className="text-slate-600">
-            Calculate dan analyze sponsorship ROI dengan AI
-          </p>
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="calculator" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="calculator" className="flex items-center gap-2">
-              <Calculator className="w-4 h-4" /> Calculator
-            </TabsTrigger>
-            <TabsTrigger value="analysis" className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4" /> AI Analysis
-            </TabsTrigger>
-            <TabsTrigger value="benchmark" className="flex items-center gap-2">
-              <PieChart className="w-4 h-4" /> Benchmarks
-            </TabsTrigger>
-          </TabsList>
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          marginBottom: '24px',
+          borderBottom: '1px solid #e2e8f0',
+          paddingBottom: '12px'
+        }}>
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                  backgroundColor: isActive ? '#16a34a' : 'transparent',
+                  color: isActive ? 'white' : '#64748b',
+                }}
+              >
+                <Icon size={16} />
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
 
-          {/* CALCULATOR TAB */}
-          <TabsContent value="calculator" className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Input Form */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-emerald-500" />
-                    Input Details
-                  </CardTitle>
-                  <CardDescription>
-                    Masukkan detail sponsorship untuk calculate ROI
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Brand Name</Label>
-                    <Input
-                      placeholder="Contoh: OPPO"
-                      value={brandName}
-                      onChange={(e) => setBrandName(e.target.value)}
-                    />
-                  </div>
+        {/* CALCULATOR TAB */}
+        {activeTab === 'calculator' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            {/* Input Form */}
+            <div style={{
+              background: 'linear-gradient(180deg, #ffffff, #fafafa)',
+              borderRadius: '16px',
+              border: '1px solid #e2e8f0',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid #e2e8f0',
+                background: 'linear-gradient(90deg, #dcfce7, white)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div style={{ padding: '8px', backgroundColor: '#16a34a', borderRadius: '8px' }}>
+                  <Calculator size={16} color="white" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Input Details</h3>
+                  <p style={{ fontSize: '11px', color: '#64748b' }}>Masukkan detail sponsorship untuk calculate ROI</p>
+                </div>
+              </div>
 
-                  <div>
-                    <Label>Program Type</Label>
-                    <select
-                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
-                      value={programType}
-                      onChange={(e) => setProgramType(e.target.value)}
-                    >
-                      <option value="">Select program type</option>
-                      {programTypes.map((type) => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
-                  </div>
+              <div style={{ padding: '24px' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '8px' }}>Brand Name</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: OPPO"
+                    value={brandName}
+                    onChange={(e) => setBrandName(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
 
-                  <div>
-                    <Label>Budget (IDR)</Label>
-                    <Input
-                      placeholder="Contoh: 500.000.000 atau 500M"
-                      value={budget}
-                      onChange={(e) => setBudget(e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Duration</Label>
-                    <Input
-                      placeholder="Contoh: 3 months"
-                      value={duration}
-                      onChange={(e) => setDuration(e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Expected Reach (views/impressions)</Label>
-                    <Input
-                      placeholder="Contoh: 10.000.000"
-                      value={expectedReach}
-                      onChange={(e) => setExpectedReach(e.target.value)}
-                    />
-                  </div>
-
-                  <Button
-                    onClick={quickCalculate}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700"
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '8px' }}>Program Type</label>
+                  <select
+                    value={programType}
+                    onChange={(e) => setProgramType(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      backgroundColor: 'white',
+                      outline: 'none',
+                    }}
                   >
-                    <Calculator className="w-4 h-4 mr-2" />
-                    Calculate ROI
+                    <option value="">Select program type</option>
+                    {programTypes.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '8px' }}>Budget (IDR)</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 500.000.000"
+                    value={budget}
+                    onChange={(e) => setBudget(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '8px' }}>Expected Reach</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 10.000.000"
+                    value={expectedReach}
+                    onChange={(e) => setExpectedReach(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+
+                <Button onClick={quickCalculate} style={{ width: '100%', backgroundColor: '#16a34a' }}>
+                  <Calculator size={16} style={{ marginRight: '8px' }} />
+                  Calculate ROI
+                </Button>
+              </div>
+            </div>
+
+            {/* Results */}
+            {roiResult ? (
+              <div style={{
+                background: 'linear-gradient(180deg, #ffffff, #fafafa)',
+                borderRadius: '16px',
+                border: `2px solid ${getRiskColor(roiResult.riskLevel).border}`,
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  padding: '16px 20px',
+                  borderBottom: '1px solid #e2e8f0',
+                  background: `linear-gradient(90deg, ${getRiskColor(roiResult.riskLevel).bg}, white)`,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ padding: '8px', backgroundColor: '#16a34a', borderRadius: '8px' }}>
+                      <TrendingUp size={16} color="white" />
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>ROI Analysis</h3>
+                      <Badge style={{
+                        fontSize: '10px',
+                        backgroundColor: getRiskColor(roiResult.riskLevel).bg,
+                        color: getRiskColor(roiResult.riskLevel).text
+                      }}>
+                        {roiResult.riskLevel === 'low' ? 'Low Risk' : roiResult.riskLevel === 'medium' ? 'Medium Risk' : 'High Risk'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    <Download size={14} style={{ marginRight: '6px' }} /> Export
                   </Button>
-                </CardContent>
-              </Card>
+                </div>
 
-              {/* Results */}
-              {roiResult && (
-                <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span className="text-emerald-700">ROI Analysis</span>
-                      {getRiskBadge(roiResult.riskLevel)}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* ROI Score */}
-                    <div className="text-center">
-                      <div className="relative w-32 h-32 mx-auto mb-4">
-                        <svg className="w-32 h-32 transform -rotate-90">
-                          <circle
-                            cx="64"
-                            cy="64"
-                            r="56"
-                            strokeWidth="12"
-                            stroke="currentColor"
-                            fill="none"
-                            className="text-slate-200"
-                          />
-                          <circle
-                            cx="64"
-                            cy="64"
-                            r="56"
-                            strokeWidth="12"
-                            stroke="currentColor"
-                            fill="none"
-                            className={getRiskColor(roiResult.riskLevel)}
-                            strokeDasharray={`${Math.min(Math.abs(roiResult.roi), 100) * 3.52} 352`}
-                          />
-                        </svg>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div>
-                            <p className={`text-3xl font-bold ${roiResult.roi >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                              {roiResult.roi.toFixed(0)}%
-                            </p>
-                            <p className="text-xs text-slate-500">ROI</p>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-sm text-slate-600">{roiResult.justification}</p>
+                <div style={{ padding: '24px' }}>
+                  {/* ROI Score */}
+                  <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                    <div style={{
+                      width: '120px',
+                      height: '120px',
+                      borderRadius: '50%',
+                      border: '8px solid',
+                      borderColor: roiResult.roi >= 30 ? '#16a34a' : roiResult.roi >= 0 ? '#d97706' : '#dc2626',
+                      margin: '0 auto 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'column'
+                    }}>
+                      <span style={{ fontSize: '28px', fontWeight: 800, color: roiResult.roi >= 0 ? '#16a34a' : '#dc2626' }}>
+                        {roiResult.roi.toFixed(0)}%
+                      </span>
+                      <span style={{ fontSize: '10px', color: '#94a3b8' }}>ROI</span>
                     </div>
+                  </div>
 
-                    {/* Metrics */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-white p-4 rounded-lg border">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Target className="w-4 h-4 text-blue-500" />
-                          <span className="text-sm text-slate-500">CPM</span>
-                        </div>
-                        <p className="text-xl font-bold">{formatCurrency(roiResult.cpm)}</p>
-                        <p className="text-xs text-slate-400">per 1000 impressions</p>
-                      </div>
-                      <div className="bg-white p-4 rounded-lg border">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Users className="w-4 h-4 text-purple-500" />
-                          <span className="text-sm text-slate-500">CPE</span>
-                        </div>
-                        <p className="text-xl font-bold">{formatCurrency(roiResult.cpe)}</p>
-                        <p className="text-xs text-slate-400">per engagement</p>
-                      </div>
+                  {/* Metrics */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                    <div style={{ padding: '16px', backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                      <Target size={16} color="#2563eb" style={{ marginBottom: '8px' }} />
+                      <p style={{ fontSize: '10px', color: '#64748b' }}>CPM</p>
+                      <p style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>{formatCurrency(roiResult.cpm)}</p>
                     </div>
-
-                    {/* Recommendation */}
-                    <div className={`p-4 rounded-lg ${
-                      roiResult.roi >= 30 ? 'bg-green-50 border border-green-200' :
-                      roiResult.roi >= 0 ? 'bg-amber-50 border border-amber-200' :
-                      'bg-red-50 border border-red-200'
-                    }`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        {roiResult.roi >= 30 ? (
-                          <CheckCircle2 className="w-5 h-5 text-green-600" />
-                        ) : roiResult.roi >= 0 ? (
-                          <AlertCircle className="w-5 h-5 text-amber-600" />
-                        ) : (
-                          <XCircle className="w-5 h-5 text-red-600" />
-                        )}
-                        <span className="font-semibold">Recommendation</span>
-                      </div>
-                      <p className="text-sm">{roiResult.recommendation}</p>
+                    <div style={{ padding: '16px', backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                      <Users size={16} color="#7c3aed" style={{ marginBottom: '8px' }} />
+                      <p style={{ fontSize: '10px', color: '#64748b' }}>CPE</p>
+                      <p style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>{formatCurrency(roiResult.cpe)}</p>
                     </div>
+                  </div>
 
-                    <Button variant="outline" className="w-full">
-                      <Download className="w-4 h-4 mr-2" />
-                      Export PDF
-                    </Button>
-                  </CardContent>
-                </Card>
+                  {/* Recommendation */}
+                  <div style={{
+                    padding: '16px',
+                    backgroundColor: getRiskColor(roiResult.riskLevel).bg,
+                    borderRadius: '12px',
+                    border: `1px solid ${getRiskColor(roiResult.riskLevel).border}`
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      {roiResult.roi >= 30 ? (
+                        <CheckCircle2 size={18} color="#16a34a" />
+                      ) : roiResult.roi >= 0 ? (
+                        <AlertCircle size={18} color="#d97706" />
+                      ) : (
+                        <XCircle size={18} color="#dc2626" />
+                      )}
+                      <span style={{ fontSize: '13px', fontWeight: 600 }}>Recommendation</span>
+                    </div>
+                    <p style={{ fontSize: '12px', color: '#64748b' }}>{roiResult.recommendation}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                background: 'linear-gradient(180deg, #ffffff, #fafafa)',
+                borderRadius: '16px',
+                border: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <div style={{ textAlign: 'center', padding: '60px 40px' }}>
+                  <div style={{ padding: '20px', backgroundColor: '#dcfce7', borderRadius: '50%', display: 'inline-block', marginBottom: '16px' }}>
+                    <Calculator size={40} color="#86efac" />
+                  </div>
+                  <p style={{ fontSize: '14px', color: '#64748b' }}>Results akan muncul di sini</p>
+                  <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>Masukkan data dan click Calculate</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* AI ANALYSIS TAB */}
+        {activeTab === 'analysis' && (
+          <div style={{
+            background: 'linear-gradient(180deg, #ffffff, #fafafa)',
+            borderRadius: '16px',
+            border: '1px solid #e2e8f0',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #e2e8f0',
+              background: 'linear-gradient(90deg, #f5f3ff, white)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <div style={{ padding: '8px', backgroundColor: '#7c3aed', borderRadius: '8px' }}>
+                <BarChart3 size={16} color="white" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>AI Deep ROI Analysis</h3>
+                <p style={{ fontSize: '11px', color: '#64748b' }}>Get detailed ROI analysis dengan AI-powered insights</p>
+              </div>
+            </div>
+
+            <div style={{ padding: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '8px' }}>Brand Name</label>
+                  <input
+                    type="text"
+                    placeholder="Brand"
+                    value={brandName}
+                    onChange={(e) => setBrandName(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '8px' }}>Program Type</label>
+                  <select
+                    value={programType}
+                    onChange={(e) => setProgramType(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      backgroundColor: 'white',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="">Select program</option>
+                    {programTypes.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '8px' }}>Budget</label>
+                  <input
+                    type="text"
+                    placeholder="Budget"
+                    value={budget}
+                    onChange={(e) => setBudget(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '8px' }}>Duration</label>
+                  <input
+                    type="text"
+                    placeholder="Duration"
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <Button onClick={analyzeROI} disabled={!brandName || !programType || !budget} style={{ width: '100%', backgroundColor: '#7c3aed' }}>
+                <Sparkles size={16} style={{ marginRight: '8px' }} />
+                Generate AI Analysis
+              </Button>
+
+              {analysisResult && (
+                <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#f5f3ff', borderRadius: '12px', border: '2px solid #c4b5fd' }}>
+                  <div style={{ fontSize: '13px', color: '#475569', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                    {analysisResult}
+                  </div>
+                </div>
               )}
             </div>
-          </TabsContent>
+          </div>
+        )}
 
-          {/* AI ANALYSIS TAB */}
-          <TabsContent value="analysis" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-purple-500" />
-                  AI Deep ROI Analysis
-                </CardTitle>
-                <CardDescription>
-                  Get detailed ROI analysis dengan AI-powered insights
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
+        {/* BENCHMARKS TAB */}
+        {activeTab === 'benchmark' && (
+          <div style={{
+            background: 'linear-gradient(180deg, #ffffff, #fafafa)',
+            borderRadius: '16px',
+            border: '1px solid #e2e8f0',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #e2e8f0',
+              background: 'linear-gradient(90deg, #eff6ff, white)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <div style={{ padding: '8px', backgroundColor: '#2563eb', borderRadius: '8px' }}>
+                <PieChart size={16} color="white" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Industry Benchmarks</h3>
+                <p style={{ fontSize: '11px', color: '#64748b' }}>Average CPM dan ROI by industry</p>
+              </div>
+            </div>
+
+            <div style={{ padding: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                {benchmarks.map((bm) => (
+                  <div
+                    key={bm.industry}
+                    style={{
+                      padding: '20px',
+                      backgroundColor: 'white',
+                      borderRadius: '12px',
+                      border: '1px solid #e2e8f0',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#2563eb'
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.1)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#e2e8f0'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
+                  >
                     <div>
-                      <Label>Brand Name</Label>
-                      <Input
-                        placeholder="Brand"
-                        value={brandName}
-                        onChange={(e) => setBrandName(e.target.value)}
-                      />
+                      <p style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>{bm.industry}</p>
+                      <p style={{ fontSize: '11px', color: '#64748b' }}>Avg CPM: {bm.avgCPM}</p>
                     </div>
-                    <div>
-                      <Label>Program Type</Label>
-                      <select
-                        className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
-                        value={programType}
-                        onChange={(e) => setProgramType(e.target.value)}
-                      >
-                        <option value="">Select program</option>
-                        {programTypes.map((type) => (
-                          <option key={type} value={type}>{type}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <Label>Budget</Label>
-                      <Input
-                        placeholder="Budget"
-                        value={budget}
-                        onChange={(e) => setBudget(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label>Duration</Label>
-                      <Input
-                        placeholder="Duration"
-                        value={duration}
-                        onChange={(e) => setDuration(e.target.value)}
-                      />
+                    <div style={{ textAlign: 'right' }}>
+                      <Badge style={{
+                        fontSize: '11px',
+                        backgroundColor: bm.potential === 'Very High' ? '#dcfce7' : bm.potential === 'High' ? '#eff6ff' : '#f1f5f9',
+                        color: bm.potential === 'Very High' ? '#16a34a' : bm.potential === 'High' ? '#2563eb' : '#64748b',
+                        marginBottom: '4px'
+                      }}>
+                        {bm.avgROI} ROI
+                      </Badge>
+                      <p style={{ fontSize: '10px', color: '#94a3b8' }}>{bm.potential} Potential</p>
                     </div>
                   </div>
-
-                  <Button
-                    onClick={analyzeROI}
-                    className="w-full bg-purple-600 hover:bg-purple-700"
-                    disabled={loading || !brandName || !programType || !budget}
-                  >
-                    {loading ? (
-                      <>
-                        <LoadingPage /> Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <BarChart3 className="w-4 h-4 mr-2" />
-                        Generate AI Analysis
-                      </>
-                    )}
-                  </Button>
-
-                  {analysisResult && (
-                    <Card className="bg-purple-50 border-purple-200">
-                      <CardContent className="pt-4">
-                        <div className="whitespace-pre-wrap text-sm">
-                          {analysisResult}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* BENCHMARKS TAB */}
-          <TabsContent value="benchmark" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PieChart className="w-5 h-5 text-blue-500" />
-                  Industry Benchmarks
-                </CardTitle>
-                <CardDescription>
-                  Average CPM dan ROI by industry
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {[
-                    { industry: "Technology", avgCPM: "Rp 45.000", avgROI: "35%", potential: "High" },
-                    { industry: "Beauty & Personal Care", avgCPM: "Rp 38.000", avgROI: "42%", potential: "Very High" },
-                    { industry: "FMCG", avgCPM: "Rp 25.000", avgROI: "28%", potential: "Medium" },
-                    { industry: "Automotive", avgCPM: "Rp 55.000", avgROI: "45%", potential: "High" },
-                    { industry: "Fintech", avgCPM: "Rp 65.000", avgROI: "52%", potential: "Very High" },
-                    { industry: "Food & Beverage", avgCPM: "Rp 30.000", avgROI: "32%", potential: "Medium" },
-                  ].map((benchmark) => (
-                    <div key={benchmark.industry} className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50">
-                      <div>
-                        <p className="font-medium">{benchmark.industry}</p>
-                        <p className="text-sm text-slate-500">Avg CPM: {benchmark.avgCPM}</p>
-                      </div>
-                      <div className="text-right">
-                        <Badge className={benchmark.potential === "Very High" ? "bg-green-100 text-green-700" :
-                          benchmark.potential === "High" ? "bg-blue-100 text-blue-700" :
-                          "bg-slate-100 text-slate-600"}>
-                          {benchmark.avgROI} ROI
-                        </Badge>
-                        <p className="text-xs text-slate-500 mt-1">{benchmark.potential} Potential</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </MainLayout>
   )

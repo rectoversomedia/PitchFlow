@@ -3,26 +3,21 @@
 import { useState } from "react"
 import { MainLayout } from "@/components/layout/MainLayout"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LoadingPage } from "@/components/ui/loading"
 import {
   TrendingUp,
   Flame,
-  Star,
   Target,
   Calendar,
+  BarChart3,
   ArrowUpRight,
   ArrowDownRight,
   Minus,
   RefreshCw,
-  BarChart3,
-  PieChart,
-  Clock,
-  Zap
+  Sparkles,
+  Search,
+  ChevronRight,
 } from "lucide-react"
 
 interface Trend {
@@ -37,91 +32,42 @@ interface Trend {
 }
 
 const mockTrends: Trend[] = [
-  {
-    id: "1",
-    title: "Micro-Influencer Marketing",
-    category: "Marketing",
-    trend: "up",
-    growth: "+45%",
-    description: "Brand lebih memilih micro-influencer dengan followers 10K-100K untuk reach yang lebih engaged",
-    brands: ["Sociolla", "Wardah", "Gojek"],
-    example: "Wardah collab dengan beauty blogger 50K followers"
-  },
-  {
-    id: "2",
-    title: "Live Commerce",
-    category: "E-Commerce",
-    trend: "up",
-    growth: "+120%",
-    description: "Live streaming shopping experience dengan interactive features",
-    brands: ["Shopee", "Tokopedia", "Blibli"],
-    example: "Shopee Live dengan artis dan flash sale"
-  },
-  {
-    id: "3",
-    title: "Health & Wellness",
-    category: "Lifestyle",
-    trend: "up",
-    growth: "+35%",
-    description: "Brand kesehatan dan wellness makin agresif sponsor program kesehatan",
-    brands: ["Greenfields", "Bear Brand", "Frisian Flag"],
-    example: "Bear Brand sponsorship podcast kesehatan"
-  },
-  {
-    id: "4",
-    title: "Gaming & Esports",
-    category: "Entertainment",
-    trend: "up",
-    growth: "+89%",
-    description: "Esports tournament dan gaming content makin menarik brand sponsor",
-    brands: ["Red Bull", "ASUS ROG", "Monster Energy"],
-    example: "ASUS ROG sponsorship MLBB tournament"
-  },
-  {
-    id: "5",
-    title: "Sinetron Ramadan",
-    category: "Broadcasting",
-    trend: "stable",
-    growth: "+5%",
-    description: "Sinetron Ramadan tetap menjadi prime time untuk brand activation",
-    brands: ["OPPO", "Samsung", "Indomie"],
-    example: "OPPO product placement di sinetron RCTI"
-  },
-  {
-    id: "6",
-    title: "Podcast Sponsorship",
-    category: "Audio",
-    trend: "up",
-    growth: "+67%",
-    description: "Brand mulai realize potensi podcast untuk target demographic spesifik",
-    brands: ["Spotify", "Grab", "Telkomsel"],
-    example: "Grab sponsorship di podcast Cerita Distori"
-  }
+  { id: "1", title: "Micro-Influencer Marketing", category: "Marketing", trend: "up", growth: "+45%", description: "Brand lebih memilih micro-influencer dengan followers 10K-100K untuk reach yang lebih engaged", brands: ["Sociolla", "Wardah", "Gojek"], example: "Wardah collab dengan beauty blogger 50K followers" },
+  { id: "2", title: "Live Commerce", category: "E-Commerce", trend: "up", growth: "+120%", description: "Live streaming shopping experience dengan interactive features", brands: ["Shopee", "Tokopedia", "Blibli"], example: "Shopee Live dengan artis dan flash sale" },
+  { id: "3", title: "Health & Wellness", category: "Lifestyle", trend: "up", growth: "+35%", description: "Brand kesehatan dan wellness makin agresif sponsor program kesehatan", brands: ["Greenfields", "Bear Brand", "Frisian Flag"], example: "Bear Brand sponsorship podcast kesehatan" },
+  { id: "4", title: "Gaming & Esports", category: "Entertainment", trend: "up", growth: "+89%", description: "Esports tournament dan gaming content makin menarik brand sponsor", brands: ["Red Bull", "ASUS ROG", "Monster Energy"], example: "ASUS ROG sponsorship MLBB tournament" },
+  { id: "5", title: "Sinetron Ramadan", category: "Broadcasting", trend: "stable", growth: "+5%", description: "Sinetron Ramadan tetap menjadi prime time untuk brand activation", brands: ["OPPO", "Samsung", "Indomie"], example: "OPPO product placement di sinetron RCTI" },
+  { id: "6", title: "Podcast Sponsorship", category: "Audio", trend: "up", growth: "+67%", description: "Brand mulai realize potensi podcast untuk target demographic spesifik", brands: ["Spotify", "Grab", "Telkomsel"], example: "Grab sponsorship di podcast Cerita Distori" },
 ]
 
 const hotCategories = [
-  { name: "Technology", change: "+45%", icon: Zap },
-  { name: "Beauty & Personal Care", change: "+38%", icon: Star },
-  { name: "FMCG", change: "+25%", icon: TrendingUp },
-  { name: "Automotive", change: "+18%", icon: Target },
-  { name: "Fintech", change: "+52%", icon: BarChart3 },
-  { name: "Gaming", change: "+89%", icon: Flame },
+  { name: "Technology", change: "+45%", icon: TrendingUp, color: "#2563eb", bg: "#eff6ff", border: "#93c5fd" },
+  { name: "Beauty & Personal Care", change: "+38%", icon: Flame, color: "#ec4899", bg: "#fdf2f8", border: "#fbcfe8" },
+  { name: "FMCG", change: "+25%", icon: Target, color: "#16a34a", bg: "#dcfce7", border: "#86efac" },
+  { name: "Automotive", change: "+18%", icon: TrendingUp, color: "#ea580c", bg: "#fff7ed", border: "#fed7aa" },
+  { name: "Fintech", change: "+52%", icon: BarChart3, color: "#7c3aed", bg: "#f5f3ff", border: "#c4b5fd" },
+  { name: "Gaming", change: "+89%", icon: Flame, color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
 ]
 
 export default function TrendRadar() {
   const [loading, setLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState("trends")
   const [selectedIndustry, setSelectedIndustry] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
-  const [trends, setTrends] = useState<Trend[]>(mockTrends)
   const [analysisResult, setAnalysisResult] = useState<string | null>(null)
   const [selectedYear, setSelectedYear] = useState(2026)
 
+  const tabs = [
+    { id: "trends", label: "Trends", icon: TrendingUp },
+    { id: "analysis", label: "AI Analysis", icon: BarChart3 },
+    { id: "calendar", label: "Calendar", icon: Calendar },
+  ]
+
   const industries = ["all", "Marketing", "E-Commerce", "Lifestyle", "Entertainment", "Broadcasting", "Audio", "Technology"]
 
-  const filteredTrends = trends.filter(trend => {
+  const filteredTrends = mockTrends.filter(trend => {
     const matchesIndustry = selectedIndustry === "all" || trend.category === selectedIndustry
-    const matchesSearch = trend.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      trend.description.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesSearch = trend.title.toLowerCase().includes(searchQuery.toLowerCase()) || trend.description.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesIndustry && matchesSearch
   })
 
@@ -131,21 +77,12 @@ export default function TrendRadar() {
       const response = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'trendAnalysis',
-          params: {
-            industry: selectedIndustry === "all" ? "Semua Industri" : selectedIndustry,
-            year: selectedYear
-          }
-        })
+        body: JSON.stringify({ action: 'trendAnalysis', params: { industry: selectedIndustry === "all" ? "Semua Industri" : selectedIndustry, year: selectedYear } })
       })
-
       const data = await response.json()
-      if (data.success) {
-        setAnalysisResult(data.data)
-      }
-    } catch (error) {
-      console.error('Analysis failed:', error)
+      if (data.success) setAnalysisResult(data.data)
+    } catch (err) {
+      console.error('Analysis failed:', err)
     } finally {
       setLoading(false)
     }
@@ -153,256 +90,354 @@ export default function TrendRadar() {
 
   const getTrendIcon = (trend: "up" | "down" | "stable") => {
     switch (trend) {
-      case "up":
-        return <ArrowUpRight className="w-4 h-4 text-green-500" />
-      case "down":
-        return <ArrowDownRight className="w-4 h-4 text-red-500" />
-      default:
-        return <Minus className="w-4 h-4 text-slate-400" />
+      case "up": return <ArrowUpRight className="w-4 h-4" style={{ color: '#16a34a' }} />
+      case "down": return <ArrowDownRight className="w-4 h-4" style={{ color: '#dc2626' }} />
+      default: return <Minus className="w-4 h-4" style={{ color: '#94a3b8' }} />
     }
   }
 
   const getTrendBadge = (trend: "up" | "down" | "stable") => {
     switch (trend) {
-      case "up":
-        return <Badge className="bg-green-100 text-green-700 hover:bg-green-200">Trending Up</Badge>
-      case "down":
-        return <Badge className="bg-red-100 text-red-700 hover:bg-red-200">Trending Down</Badge>
-      default:
-        return <Badge className="bg-slate-100 text-slate-600">Stable</Badge>
+      case "up": return <Badge style={{ fontSize: '10px', backgroundColor: '#dcfce7', color: '#16a34a' }}>Trending Up</Badge>
+      case "down": return <Badge style={{ fontSize: '10px', backgroundColor: '#fef2f2', color: '#dc2626' }}>Trending Down</Badge>
+      default: return <Badge variant="outline" style={{ fontSize: '10px' }}>Stable</Badge>
     }
   }
 
+  if (loading) return <LoadingPage />
+
   return (
     <MainLayout>
-      <div className="p-6 max-w-7xl mx-auto">
+      <div style={{ fontFamily: "'Inter', sans-serif" }}>
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-orange-600" />
-            </div>
-            <h1 className="text-3xl font-bold">Trend Radar</h1>
-            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-              <Flame className="w-3 h-3 mr-1" /> Real-time
-            </Badge>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+          <div>
+            <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ padding: '8px', backgroundColor: '#fff7ed', borderRadius: '10px' }}>
+                <TrendingUp size={20} color="#ea580c" />
+              </div>
+              Trend Radar
+              <Badge variant="outline" style={{ fontSize: '11px', backgroundColor: '#fff7ed', color: '#ea580c', borderColor: '#fed7aa' }}>
+                <Flame size={10} style={{ marginRight: '4px' }} /> Real-time
+              </Badge>
+            </h1>
+            <p style={{ fontSize: '14px', color: '#64748b', marginLeft: '44px' }}>
+              Track tren sponsorship dan media terbaru di Indonesia
+            </p>
           </div>
-          <p className="text-slate-600">
-            Track tren sponsorship dan media terbaru di Indonesia
-          </p>
         </div>
 
         {/* Hot Categories */}
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Flame className="w-5 h-5 text-orange-500" />
+        <div style={{ marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Flame size={18} color="#ea580c" />
             Hot Categories
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {hotCategories.map((cat) => (
-              <Card key={cat.name} className="hover:shadow-md transition-shadow cursor-pointer hover:border-orange-200">
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <cat.icon className="w-5 h-5 text-orange-500" />
-                    <span className="text-green-600 text-sm font-semibold">{cat.change}</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' }}>
+            {hotCategories.map((cat, index) => {
+              const Icon = cat.icon
+              return (
+                <div
+                  key={index}
+                  style={{
+                    background: `linear-gradient(135deg, ${cat.bg}, white)`,
+                    borderRadius: '12px',
+                    padding: '16px',
+                    border: `1px solid ${cat.border}`,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.boxShadow = `0 4px 12px ${cat.border}50`
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div style={{ padding: '6px', backgroundColor: 'white', borderRadius: '8px' }}>
+                      <Icon size={16} color={cat.color} />
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#16a34a' }}>{cat.change}</span>
                   </div>
-                  <p className="text-sm font-medium">{cat.name}</p>
-                </CardContent>
-              </Card>
-            ))}
+                  <p style={{ fontSize: '12px', fontWeight: 500, color: '#0f172a' }}>{cat.name}</p>
+                </div>
+              )
+            })}
           </div>
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="trends" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="trends" className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" /> Trends
-            </TabsTrigger>
-            <TabsTrigger value="analysis" className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4" /> AI Analysis
-            </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" /> Calendar
-            </TabsTrigger>
-          </TabsList>
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          marginBottom: '24px',
+          borderBottom: '1px solid #e2e8f0',
+          paddingBottom: '12px'
+        }}>
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                  backgroundColor: isActive ? '#2563eb' : 'transparent',
+                  color: isActive ? 'white' : '#64748b',
+                }}
+              >
+                <Icon size={16} />
+                {tab.label}
+              </button>
+            )
+          })}
+        </div>
 
-          {/* TRENDS TAB */}
-          <TabsContent value="trends" className="space-y-6">
+        {/* TRENDS TAB */}
+        {activeTab === 'trends' && (
+          <div>
             {/* Filters */}
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex flex-wrap gap-4 items-end">
-                  <div className="flex-1 min-w-[200px]">
-                    <Label>Search</Label>
-                    <Input
-                      placeholder="Cari trend..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                  <div className="w-[200px]">
-                    <Label>Industry</Label>
-                    <select
-                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
-                      value={selectedIndustry}
-                      onChange={(e) => setSelectedIndustry(e.target.value)}
-                    >
-                      {industries.map((ind) => (
-                        <option key={ind} value={ind}>
-                          {ind === "all" ? "Semua Industry" : ind}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <Button variant="outline" onClick={() => setTrends([...mockTrends])}>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Refresh
-                  </Button>
+            <div style={{
+              background: 'linear-gradient(180deg, #ffffff, #fafafa)',
+              borderRadius: '16px',
+              border: '1px solid #e2e8f0',
+              padding: '20px',
+              marginBottom: '20px'
+            }}>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '8px' }}>
+                    <Search size={12} style={{ marginRight: '4px', display: 'inline' }} /> Search
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Cari trend..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
                 </div>
-              </CardContent>
-            </Card>
+                <div style={{ width: '180px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '8px' }}>Industry</label>
+                  <select
+                    value={selectedIndustry}
+                    onChange={(e) => setSelectedIndustry(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      backgroundColor: 'white',
+                      outline: 'none',
+                    }}
+                  >
+                    {industries.map((ind) => (
+                      <option key={ind} value={ind}>{ind === "all" ? "Semua Industry" : ind}</option>
+                    ))}
+                  </select>
+                </div>
+                <Button variant="outline" onClick={() => setSearchQuery('')}>
+                  <RefreshCw size={14} style={{ marginRight: '6px' }} />
+                  Reset
+                </Button>
+              </div>
+            </div>
 
             {/* Trends List */}
-            <div className="space-y-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {filteredTrends.map((trend) => (
-                <Card key={trend.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="pt-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold text-lg">{trend.title}</h3>
-                          {getTrendBadge(trend.trend)}
-                          <Badge variant="outline">{trend.category}</Badge>
-                        </div>
-                        <p className="text-slate-600 mb-3">{trend.description}</p>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {trend.brands.map((brand) => (
-                            <Badge key={brand} variant="secondary">{brand}</Badge>
-                          ))}
-                        </div>
-                        {trend.example && (
-                          <p className="text-sm text-slate-500 italic">
-                            Example: {trend.example}
-                          </p>
-                        )}
+                <div
+                  key={trend.id}
+                  style={{
+                    background: 'linear-gradient(180deg, #ffffff, #fafafa)',
+                    borderRadius: '16px',
+                    border: '1px solid #e2e8f0',
+                    padding: '20px',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>{trend.title}</h3>
+                        {getTrendBadge(trend.trend)}
+                        <Badge variant="outline" style={{ fontSize: '10px' }}>{trend.category}</Badge>
                       </div>
-                      <div className="text-right ml-4">
-                        <div className="flex items-center gap-1 text-green-600 font-bold text-xl">
-                          {getTrendIcon(trend.trend)}
-                          {trend.growth}
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1">vs last year</p>
+                      <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '12px', lineHeight: 1.5 }}>{trend.description}</p>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        {trend.brands.map((brand) => (
+                          <Badge key={brand} variant="secondary" style={{ fontSize: '10px' }}>{brand}</Badge>
+                        ))}
                       </div>
+                      {trend.example && (
+                        <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '10px', fontStyle: 'italic' }}>
+                          Example: {trend.example}
+                        </p>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
+                    <div style={{ textAlign: 'right', marginLeft: '24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '20px', fontWeight: 800, color: '#16a34a' }}>
+                        {getTrendIcon(trend.trend)}
+                        {trend.growth}
+                      </div>
+                      <p style={{ fontSize: '10px', color: '#94a3b8', marginTop: '4px' }}>vs last year</p>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
-          </TabsContent>
+          </div>
+        )}
 
-          {/* AI ANALYSIS TAB */}
-          <TabsContent value="analysis" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-purple-500" />
-                  AI Trend Analysis
-                </CardTitle>
-                <CardDescription>
-                  Generate deep trend analysis dengan AI untuk industri spesifik
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <Label>Industry</Label>
-                    <select
-                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
-                      value={selectedIndustry}
-                      onChange={(e) => setSelectedIndustry(e.target.value)}
-                    >
-                      {industries.filter(i => i !== "all").map((ind) => (
-                        <option key={ind} value={ind}>{ind}</option>
-                      ))}
-                    </select>
+        {/* AI ANALYSIS TAB */}
+        {activeTab === 'analysis' && (
+          <div style={{
+            background: 'linear-gradient(180deg, #ffffff, #fafafa)',
+            borderRadius: '16px',
+            border: '1px solid #e2e8f0',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #e2e8f0',
+              background: 'linear-gradient(90deg, #f5f3ff, white)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <div style={{ padding: '8px', backgroundColor: '#7c3aed', borderRadius: '8px' }}>
+                <BarChart3 size={16} color="white" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>AI Trend Analysis</h3>
+                <p style={{ fontSize: '11px', color: '#64748b' }}>Generate deep trend analysis dengan AI untuk industri spesifik</p>
+              </div>
+            </div>
+
+            <div style={{ padding: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '8px' }}>Industry</label>
+                  <select
+                    value={selectedIndustry}
+                    onChange={(e) => setSelectedIndustry(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      backgroundColor: 'white',
+                      outline: 'none',
+                    }}
+                  >
+                    {industries.filter(i => i !== "all").map((ind) => (
+                      <option key={ind} value={ind}>{ind}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '8px' }}>Year</label>
+                  <select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      backgroundColor: 'white',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value={2026}>2026</option>
+                    <option value={2025}>2025</option>
+                    <option value={2024}>2024</option>
+                  </select>
+                </div>
+              </div>
+
+              <Button onClick={analyzeTrends} disabled={selectedIndustry === "all"} style={{ width: '100%', backgroundColor: '#7c3aed' }}>
+                <Sparkles size={16} style={{ marginRight: '8px' }} />
+                Generate Trend Analysis
+              </Button>
+
+              {analysisResult && (
+                <div style={{ marginTop: '24px', padding: '20px', backgroundColor: '#f5f3ff', borderRadius: '12px', border: '2px solid #c4b5fd' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#7c3aed' }}>Trend Analysis Report</h4>
+                    <Button variant="outline" size="sm">Copy</Button>
                   </div>
-                  <div>
-                    <Label>Year</Label>
-                    <select
-                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
-                      value={selectedYear}
-                      onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                    >
-                      <option value={2026}>2026</option>
-                      <option value={2025}>2025</option>
-                      <option value={2024}>2024</option>
-                    </select>
+                  <div style={{ fontSize: '13px', color: '#475569', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                    {analysisResult}
                   </div>
                 </div>
-                <Button
-                  onClick={analyzeTrends}
-                  className="w-full bg-purple-600 hover:bg-purple-700"
-                  disabled={loading || selectedIndustry === "all"}
-                >
-                  {loading ? (
-                    <>
-                      <LoadingPage />
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <BarChart3 className="w-4 h-4 mr-2" />
-                      Generate Trend Analysis
-                    </>
-                  )}
-                </Button>
+              )}
+            </div>
+          </div>
+        )}
 
-                {analysisResult && (
-                  <Card className="mt-6 bg-purple-50 border-purple-200">
-                    <CardContent className="pt-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-semibold text-purple-700">
-                          Trend Analysis Report
-                        </h4>
-                        <Button variant="outline" size="sm">
-                          Copy
-                        </Button>
-                      </div>
-                      <div className="whitespace-pre-wrap text-sm">
-                        {analysisResult}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* CALENDAR TAB */}
-          <TabsContent value="calendar" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-blue-500" />
-                  Event Calendar
-                </CardTitle>
-                <CardDescription>
-                  Calendar event sponsorship opportunities
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-slate-500">
-                  <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Event Calendar Coming Soon</p>
-                  <p className="text-sm mt-2">
-                    Track event dates, deadlines, dan sponsorship windows
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        {/* CALENDAR TAB */}
+        {activeTab === 'calendar' && (
+          <div style={{
+            background: 'linear-gradient(180deg, #ffffff, #fafafa)',
+            borderRadius: '16px',
+            border: '1px solid #e2e8f0',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid #e2e8f0',
+              background: 'linear-gradient(90deg, #eff6ff, white)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <div style={{ padding: '8px', backgroundColor: '#2563eb', borderRadius: '8px' }}>
+                <Calendar size={16} color="white" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Event Calendar</h3>
+                <p style={{ fontSize: '11px', color: '#64748b' }}>Calendar event sponsorship opportunities</p>
+              </div>
+            </div>
+            <div style={{ padding: '60px', textAlign: 'center' }}>
+              <div style={{ padding: '20px', backgroundColor: '#eff6ff', borderRadius: '50%', display: 'inline-block', marginBottom: '16px' }}>
+                <Calendar size={40} color="#93c5fd" />
+              </div>
+              <p style={{ fontSize: '14px', color: '#64748b' }}>Event Calendar Coming Soon</p>
+              <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>Track event dates, deadlines, dan sponsorship windows</p>
+            </div>
+          </div>
+        )}
       </div>
     </MainLayout>
   )
