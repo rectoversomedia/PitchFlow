@@ -34,7 +34,7 @@ import {
   AlertCircle,
 } from "lucide-react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 
 const briefStats = [
   { label: "Total Brief", key: "total", color: "#2563eb", bgColor: "#eff6ff", borderColor: "#93c5fd" },
@@ -45,8 +45,7 @@ const briefStats = [
 
 export default function BriefIntakePage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const action = searchParams.get('action')
+  const [action, setAction] = useState<string | null>(null)
 
   const [briefs, setBriefs] = useState<Brief[]>(mockBriefs)
   const [searchQuery, setSearchQuery] = useState("")
@@ -55,6 +54,16 @@ export default function BriefIntakePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+
+  // Handle action from URL params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const urlAction = params.get('action')
+    if (urlAction === 'new') {
+      setAction('new')
+      setShowForm(true)
+    }
+  }, [])
 
   // Form state
   const [formData, setFormData] = useState({
