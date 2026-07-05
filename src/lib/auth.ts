@@ -1,4 +1,18 @@
-// Auth utilities for middleware
-// NextAuth configuration is in app/api/auth/[...nextauth]/route.ts
+import NextAuth from "next-auth"
+import Google from "next-auth/providers/google"
 
-export { getToken } from 'next-auth/jwt'
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  providers: [
+    Google({
+      clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+  ],
+  session: {
+    strategy: "jwt",
+  },
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
+})
