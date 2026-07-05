@@ -146,7 +146,6 @@ export type LibraryProposal = {
   // Legacy support
   brandName?: string
 }
-}
 
 export type Client = {
   id: string
