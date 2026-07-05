@@ -30,11 +30,11 @@ const navItems = [
 ]
 
 const aiTools = [
-  { name: "Brand DNA Explorer", href: "/brand-dna-explorer", icon: Sparkles, badge: "NEW" },
-  { name: "Trend Radar", href: "/trend-radar", icon: BarChart3, badge: "NEW" },
-  { name: "Audience Insights", href: "/audience-insights", icon: Users, badge: "NEW" },
-  { name: "ROI Calculator", href: "/roi-calculator", icon: Sparkles, badge: "NEW" },
-  { name: "Campaign Studio", href: "/campaign-studio", icon: Lightbulb, badge: "NEW" },
+  { name: "Brand DNA Explorer", href: "/brand-dna-explorer", icon: Sparkles },
+  { name: "Trend Radar", href: "/trend-radar", icon: BarChart3 },
+  { name: "Audience Insights", href: "/audience-insights", icon: Users },
+  { name: "ROI Calculator", href: "/roi-calculator", icon: Sparkles },
+  { name: "Campaign Studio", href: "/campaign-studio", icon: Lightbulb },
 ]
 
 const toolsItems = [
@@ -163,7 +163,7 @@ export function Sidebar() {
               textTransform: 'uppercase',
               letterSpacing: '0.5px'
             }}>
-              AI Tools 🧠
+              AI Tools
             </p>
             {aiTools.map((item) => {
               const isActive = pathname === item.href
@@ -189,21 +189,9 @@ export function Sidebar() {
                   }}
                 >
                   <Icon size={16} style={{ flexShrink: 0 }} />
-                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {item.name}
                   </span>
-                  {item.badge && (
-                    <span style={{
-                      fontSize: '9px',
-                      fontWeight: 700,
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      backgroundColor: '#10b981',
-                      color: 'white',
-                    }}>
-                      {item.badge}
-                    </span>
-                  )}
                 </Link>
               )
             })}
@@ -429,7 +417,7 @@ export function Sidebar() {
                 placeholder="Ketik pesan..."
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                 style={{
                   flex: 1,
                   height: '44px',
