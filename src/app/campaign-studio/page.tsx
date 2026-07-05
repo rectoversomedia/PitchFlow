@@ -237,7 +237,7 @@ export default function CampaignStudio() {
               <Video className="w-4 h-4" /> Script
             </TabsTrigger>
             <TabsTrigger value="storyboard" className="flex items-center gap-2">
-              <ImageIconclassName="w-4 h-4" /> Storyboard
+              <ImageIcon className="w-4 h-4" /> Storyboard
             </TabsTrigger>
             <TabsTrigger value="social" className="flex items-center gap-2">
               <Share2 className="w-4 h-4" /> Social
@@ -416,7 +416,7 @@ export default function CampaignStudio() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ImageIconclassName="w-5 h-5 text-blue-500" />
+                  <ImageIcon className="w-5 h-5 text-blue-500" />
                   AI Storyboard Generator
                 </CardTitle>
                 <CardDescription>
@@ -449,7 +449,7 @@ export default function CampaignStudio() {
                   disabled={loading || !storyboardBrand || !storyboardConcept}
                 >
                   {loading ? <LoadingPage /> : null}
-                  <ImageIconclassName="w-4 h-4 mr-2" />
+                  <ImageIcon className="w-4 h-4 mr-2" />
                   Generate Storyboard Prompts
                 </Button>
 

@@ -20,10 +20,10 @@ import {
   Smartphone,
   Tv,
   Radio,
-  Instagram,
-  Youtube,
-  TikTok,
-  Facebook,
+  MessageCircle,
+  Play,
+  Video,
+  Globe,
   Download
 } from "lucide-react"
 
@@ -146,11 +146,11 @@ export default function AudienceInsights() {
   ]
 
   const mockMediaConsumption: MediaConsumption[] = [
-    { platform: "YouTube", percentage: 85, icon: <Youtube className="w-5 h-5 text-red-500" />, dailyHours: "2.5 hrs" },
-    { platform: "Instagram", percentage: 78, icon: <Instagram className="w-5 h-5 text-pink-500" />, dailyHours: "2.0 hrs" },
-    { platform: "TikTok", percentage: 72, icon: <TikTok className="w-5 h-5 text-black" />, dailyHours: "1.8 hrs" },
+    { platform: "YouTube", percentage: 85, icon: <Play className="w-5 h-5 text-red-500" />, dailyHours: "2.5 hrs" },
+    { platform: "Instagram", percentage: 78, icon: <MessageCircle className="w-5 h-5 text-pink-500" />, dailyHours: "2.0 hrs" },
+    { platform: "TikTok", percentage: 72, icon: <Video className="w-5 h-5 text-black" />, dailyHours: "1.8 hrs" },
     { platform: "TV", percentage: 65, icon: <Tv className="w-5 h-5 text-blue-500" />, dailyHours: "3.0 hrs" },
-    { platform: "Facebook", percentage: 58, icon: <Facebook className="w-5 h-5 text-blue-600" />, dailyHours: "1.2 hrs" },
+    { platform: "Facebook", percentage: 58, icon: <Globe className="w-5 h-5 text-blue-600" />, dailyHours: "1.2 hrs" },
     { platform: "Podcast", percentage: 35, icon: <Radio className="w-5 h-5 text-orange-500" />, dailyHours: "0.8 hrs" },
   ]
 
