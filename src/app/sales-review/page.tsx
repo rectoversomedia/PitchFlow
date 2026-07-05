@@ -341,7 +341,7 @@ export default function SalesReviewPage() {
                     }
                     style={{ fontSize: '10px' }}
                   >
-                    {statusLabels[selectedProposal.status]?.label}
+                    {statusLabels[selectedProposal.status]}
                   </Badge>
                 </div>
               </div>
