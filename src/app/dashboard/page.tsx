@@ -133,6 +133,14 @@ export default function DashboardPage() {
 
   const kpiCards = getKpiCards()
 
+  const pipelineStages = [
+    { id: "new_brief", title: "New Brief", color: "#2563eb", bgColor: "#eff6ff", borderColor: "#bfdbfe" },
+    { id: "drafting", title: "Drafting", color: "#ea580c", bgColor: "#fff7ed", borderColor: "#fed7aa" },
+    { id: "need_input", title: "Need Input", color: "#9333ea", bgColor: "#faf5ff", borderColor: "#e9d5ff" },
+    { id: "revised", title: "Revised", color: "#2563eb", bgColor: "#fef2f2", borderColor: "#fecaca" },
+    { id: "ready", title: "Ready", color: "#16a34a", bgColor: "#f0fdf4", borderColor: "#bbf7d0" },
+  ]
+
   const getProposalsByStatus = (status: string) => {
     return proposals.filter(p => p.status === status)
   }
@@ -340,6 +348,14 @@ export default function DashboardPage() {
         {/* Quick Actions & AI Suggestions */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
           {/* Quick Actions */}
+          {(() => {
+            const quickActions = [
+              { label: "Brief Baru", icon: Plus, bgColor: "linear-gradient(135deg, #fef2f2, #fee2e2)", color: "#2563eb", borderColor: "#fecaca", href: "/brief-intake?action=new" },
+              { label: "Buat Proposal", icon: FileText, bgColor: "linear-gradient(135deg, #eff6ff, #dbeafe)", color: "#2563eb", borderColor: "#93c5fd", href: "/proposal-builder?action=new" },
+              { label: "Library", icon: FolderOpen, bgColor: "linear-gradient(135deg, #f0fdf4, #dcfce7)", color: "#16a34a", borderColor: "#86efac", href: "/proposal-library" },
+              { label: "Brand Explorer", icon: Globe, bgColor: "linear-gradient(135deg, #fef3c7, #fde68a)", color: "#d97706", borderColor: "#fcd34d", href: "/brand-idea-explorer" },
+            ]
+            return (
           <div style={{
             background: 'linear-gradient(180deg, #ffffff, #fafafa)',
             borderRadius: '16px',
@@ -385,67 +401,17 @@ export default function DashboardPage() {
                 )
               })}
             </div>
+            )}
           </div>
 
           {/* AI Suggestions */}
-          <div style={{
-            background: 'linear-gradient(180deg, #ffffff, #fafafa)',
-            borderRadius: '16px',
-            border: '1px solid #e2e8f0',
-            padding: '24px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-              <Sparkles size={20} color="#7c3aed" />
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>AI Suggestions</h3>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {aiSuggestions.map((suggestion, index) => {
-                const IconComponent = suggestion.icon
-                return (
-                  <Link
-                    key={index}
-                    href={suggestion.href}
-                    style={{ textDecoration: 'none' }}
-                  >
-                    <div
-                      style={{
-                        padding: '14px',
-                        background: suggestion.gradient,
-                        borderRadius: '12px',
-                        border: `1px solid ${suggestion.borderColor}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        cursor: 'pointer',
-                        transition: 'transform 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateX(4px)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateX(0)'
-                      }}
-                    >
-                      <div style={{
-                        padding: '10px',
-                        borderRadius: '10px',
-                        backgroundColor: 'white',
-                        boxShadow: `0 2px 6px ${suggestion.borderColor}50`
-                      }}>
-                        <IconComponent size={16} color={suggestion.badge} />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <h4 style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '2px' }}>{suggestion.title}</h4>
-                        <p style={{ fontSize: '11px', color: '#64748b' }}>{suggestion.desc}</p>
-                      </div>
-                      <ChevronRight size={16} color="#94a3b8" />
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        </div>
+          {(() => {
+            const aiSuggestions = [
+              { title: "Similar Proposal", desc: "5 proposal serupa ditemukan", icon: Search, gradient: "linear-gradient(135deg, #f5f3ff, #ede9fe)", borderColor: "#c4b5fd", badge: "#7c3aed", href: "/proposal-library?tab=won" },
+              { title: "Improve Proposal", desc: "3 bagian bisa diperkuat", icon: Zap, gradient: "linear-gradient(135deg, #fef3c7, #fde68a)", borderColor: "#fcd34d", badge: "#ca8a04", href: "/proposal-builder?action=enhance" },
+              { title: "Creative Ideas", desc: "Ide integrasi brand fresh", icon: Lightbulb, gradient: "linear-gradient(135deg, #dcfce7, #bbf7d0)", borderColor: "#86efac", badge: "#15803d", href: "/brand-idea-explorer?action=ideas" },
+            ]
+            return (
 
         {/* Recent Activity */}
         <div style={{
@@ -501,6 +467,8 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+            </div>
+            )}
           </div>
         </div>
       </div>
