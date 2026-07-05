@@ -298,7 +298,7 @@ export default function SalesReviewPage() {
                 </div>
                 <div>
                   <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>{selectedProposal.title}</h2>
-                  <p style={{ fontSize: '12px', color: '#64748b' }}>{selectedProposal.program} • {selectedProposal.sponsorshipType}</p>
+                  <p style={{ fontSize: '12px', color: '#64748b' }}>{selectedProposal.program} • {selectedProposal.sponsorship_type}</p>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -321,11 +321,11 @@ export default function SalesReviewPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                 <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
                   <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '4px' }}>Brand</p>
-                  <p style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>{selectedProposal.brandName}</p>
+                  <p style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>{selectedProposal.brand_name}</p>
                 </div>
                 <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
                   <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '4px' }}>PIC Sales</p>
-                  <p style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>{selectedProposal.picSales}</p>
+                  <p style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>{selectedProposal.pic_sales}</p>
                 </div>
                 <div style={{ padding: '12px', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
                   <p style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '4px' }}>Deadline</p>
