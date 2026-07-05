@@ -30,14 +30,20 @@ export default function DashboardPage() {
   const [briefs, setBriefs] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [userType, setUserType] = useState<string>('demo')
 
   useEffect(() => {
-    const session = localStorage.getItem('pitchflow_session')
-    if (session) setCurrentUser(JSON.parse(session))
+    if (typeof window !== 'undefined') {
+      const session = localStorage.getItem('pitchflow_session')
+      const type = localStorage.getItem('pitchflow_user_type') || 'demo'
+      setUserType(type)
+      if (session) setCurrentUser(JSON.parse(session))
+    }
   }, [])
 
   useEffect(() => {
-    const userType = localStorage.getItem('pitchflow_user_type') || 'demo'
+    if (typeof window === 'undefined') return
+    const type = localStorage.getItem('pitchflow_user_type') || 'demo'
     async function fetchData() {
       try {
         if (userType === 'demo') {
@@ -72,7 +78,6 @@ export default function DashboardPage() {
   }
 
   const getKpiCards = () => {
-    const userType = localStorage.getItem('pitchflow_user_type') || 'demo'
     if (userType === 'demo') {
       return [
         { title: "New Briefs", value: 7, change: "+16%", icon: FileText, bgColor: "#dbeafe", iconColor: "#2563eb", borderColor: "#93c5fd", href: "/brief-intake?status=new" },
@@ -107,7 +112,22 @@ export default function DashboardPage() {
   ]
   const getProposalsByStatus = (status: string) => proposals.filter(p => p.status === status)
   const getRecentComments = () => salesComments.slice(0, 4)
-  const userType = localStorage.getItem('pitchflow_user_type') || 'demo'
+
+  if (typeof window === 'undefined') {
+    return (
+      <MainLayout>
+        <div style={{ fontFamily: "'Inter', sans-serif", padding: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ width: '40px', height: '40px', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+              <p style={{ color: '#64748b' }}>Loading...</p>
+            </div>
+          </div>
+          <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </MainLayout>
+    )
+  }
 
   return (
     <MainLayout>
