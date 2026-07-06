@@ -14,6 +14,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <SessionProvider>{children}</SessionProvider>
 }
 
+export type UserType = 'demo' | 'new' | 'supervisor' | 'acs' | 'sales'
+
 export function useAuth() {
   const { data: session, status } = useSession()
 
@@ -27,14 +29,22 @@ export function useAuth() {
       }
     : null
 
+  // For demo mode, set userType to demo
+  const isDemo = !session?.user && status !== "loading"
+
   const logout = async () => {
     const { signOut } = await import("next-auth/react")
     await signOut({ callbackUrl: "/login" })
   }
 
   return {
-    user,
-    userType: user?.role?.toLowerCase() as "supervisor" | "acs" | "sales" | undefined,
+    user: isDemo ? {
+      id: "demo-1",
+      name: "Demo User",
+      email: "demo@pitchflow.app",
+      role: "Supervisor" as User["role"],
+    } : user,
+    userType: (isDemo ? "demo" : user?.role?.toLowerCase()) as UserType,
     isLoading: status === "loading",
     logout,
   }
