@@ -223,6 +223,21 @@ CREATE TRIGGER update_brand_explorations_updated_at BEFORE UPDATE ON brand_explo
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =====================================================
+-- USER SESSIONS TABLE
+-- Stores session data for PitchFlow 3-user-types system (demo/new/existing)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS user_sessions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  session_token TEXT UNIQUE NOT NULL,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_type TEXT NOT NULL DEFAULT 'existing' CHECK (user_type IN ('demo', 'new', 'existing')),
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(session_token);
+
+-- =====================================================
 -- SEED DATA (Optional - for development)
 -- =====================================================
 -- Uncomment the following to add seed data
@@ -231,6 +246,14 @@ CREATE TRIGGER update_brand_explorations_updated_at BEFORE UPDATE ON brand_explo
 --   ('00000000-0000-0000-0000-000000000001', 'admin@rectoverso.com', 'Admin User', 'Supervisor'),
 --   ('00000000-0000-0000-0000-000000000002', 'sales@rectoverso.com', 'Sales User', 'Sales');
 
+-- RLS for user_sessions
+ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "User sessions can be managed" ON user_sessions FOR ALL USING (true);
+
+-- Create trigger for user_sessions
+CREATE TRIGGER update_user_sessions_updated_at BEFORE UPDATE ON user_sessions
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 COMMENT ON TABLE users IS 'User accounts and team members';
 COMMENT ON TABLE clients IS 'Client and brand information';
 COMMENT ON TABLE briefs IS 'Sponsorship briefs submitted by sales team';
@@ -238,3 +261,4 @@ COMMENT ON TABLE proposals IS 'Generated sponsorship proposals';
 COMMENT ON TABLE sales_comments IS 'Comments and feedback from sales team';
 COMMENT ON TABLE events IS 'Calendar events and deadlines';
 COMMENT ON TABLE brand_explorations IS 'AI-generated brand analysis and insights';
+COMMENT ON TABLE user_sessions IS 'Session data for PitchFlow 3-user-types system';

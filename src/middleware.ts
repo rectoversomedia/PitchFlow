@@ -1,24 +1,44 @@
-import { NextResponse, type NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from "next/server"
+import { auth } from "@/lib/auth"
 
-// Public paths that don't require any auth check
-const publicPaths = [
-  '/',
-  '/login',
-  '/signup',
-  '/forgot-password',
-  '/reset-password',
-  '/api/auth',
-  '/api/ai',
-  '/api/briefs',
-  '/api/proposals',
-  '/api/clients',
-  '/api/events',
-  '/api/sales-comments',
-  '/_next',
-  '/favicon.ico',
+// Protected routes that require authentication
+const protectedPaths = [
+  "/dashboard",
+  "/brief-intake",
+  "/proposal-builder",
+  "/proposal-library",
+  "/brand-idea-explorer",
+  "/sales-review",
+  "/analytics",
+  "/calendar",
+  "/client-crm",
+  "/presentation",
+  "/brand-dna-explorer",
+  "/trend-radar",
+  "/audience-insights",
+  "/roi-calculator",
+  "/campaign-studio",
 ]
 
-export function middleware(request: NextRequest) {
+// Public paths that don't require authentication
+const publicPaths = [
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/api/auth",
+  "/api/ai",
+  "/api/briefs",
+  "/api/proposals",
+  "/api/clients",
+  "/api/events",
+  "/api/sales-comments",
+  "/_next",
+  "/favicon.ico",
+  "/picthflow logo (white).png",
+]
+
+export default auth((request: NextRequest & { auth: { user?: { id?: string } } | null }) => {
   const { pathname } = request.nextUrl
 
   // Allow public paths
@@ -26,13 +46,45 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // For now, allow all access - auth is handled client-side
-  // TODO: Add proper server-side auth check if needed
+  // Allow NextAuth routes
+  if (pathname.startsWith("/api/auth")) {
+    return NextResponse.next()
+  }
+
+  // Allow static files
+  if (
+    pathname.startsWith("/_next/static") ||
+    pathname.startsWith("/_next/image") ||
+    pathname.includes(".")
+  ) {
+    return NextResponse.next()
+  }
+
+  // Check if path is protected
+  const isProtectedPath = protectedPaths.some((path) =>
+    pathname.startsWith(path)
+  )
+
+  // Redirect root to dashboard
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL("/dashboard", request.url))
+  }
+
+  if (isProtectedPath) {
+    // Check if user is authenticated
+    if (!request.auth?.user) {
+      // Redirect to login with callback URL
+      const loginUrl = new URL("/login", request.url)
+      loginUrl.searchParams.set("callbackUrl", pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+  }
+
   return NextResponse.next()
-}
+})
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }

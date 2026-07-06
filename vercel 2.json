@@ -13,5 +13,13 @@
         { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
       ]
     }
-  ]
+  ],
+  "env": {
+    "OPENAI_API_KEY": "@openai-api-key",
+    "AUTH_SECRET": "@auth-secret",
+    "GOOGLE_CLIENT_SECRET": "@google-client-secret",
+    "NEXT_PUBLIC_SUPABASE_URL": "@supabase-url",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase-anon-key",
+    "NEXT_PUBLIC_GOOGLE_CLIENT_ID": "@google-client-id"
+  }
 }

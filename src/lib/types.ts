@@ -1,9 +1,36 @@
+import { DefaultSession, DefaultUser } from "next-auth"
+import { DefaultJWT } from "next-auth/jwt"
+
 export type User = {
   id: string
   name: string
   email: string
   role: "Supervisor" | "ACS" | "Sales"
   avatar?: string
+}
+
+// Extend NextAuth types
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string
+      name?: string | null
+      email?: string | null
+      image?: string | null
+      role?: string
+    } & DefaultSession["user"]
+  }
+
+  interface User extends DefaultUser {
+    role?: string
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT extends DefaultJWT {
+    id?: string
+    role?: string
+  }
 }
 
 export type Brief = {
