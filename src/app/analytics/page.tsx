@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MainLayout } from "@/components/layout/MainLayout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { proposals, libraryProposals, briefs, users, statusLabels } from "@/lib/mock-data"
+import { useAuth } from "@/lib/auth-context"
+import { libraryProposals as mockLibraryProposals, statusLabels } from "@/lib/mock-data"
 import {
   BarChart3,
   TrendingUp,
@@ -71,13 +72,69 @@ const recentActivity = [
 ]
 
 export default function AnalyticsPage() {
+  const { userType, isLoading: isAuthLoading } = useAuth()
   const [dateRange, setDateRange] = useState("6bulan")
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [realData, setRealData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch real data for existing users
+  useEffect(() => {
+    if (userType === 'existing') {
+      async function fetchData() {
+        try {
+          const [briefsRes, proposalsRes] = await Promise.all([
+            fetch('/api/briefs'),
+            fetch('/api/proposals')
+          ])
+          const briefsData = await briefsRes.json()
+          const proposalsData = await proposalsRes.json()
+          setRealData({
+            briefs: briefsData.data || [],
+            proposals: proposalsData.data || []
+          })
+        } catch (error) {
+          console.error('Error fetching analytics data:', error)
+        } finally {
+          setIsLoading(false)
+        }
+      }
+      fetchData()
+    } else {
+      setIsLoading(false)
+    }
+  }, [userType])
 
   const handleRefresh = () => {
     setIsRefreshing(true)
     setTimeout(() => setIsRefreshing(false), 1500)
   }
+
+  // Show empty state for new users
+  if (userType === 'new' || isAuthLoading) {
+    return (
+      <MainLayout>
+        <div style={{ fontFamily: "'Inter', sans-serif" }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+            <div>
+              <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>Analytics & Insights</h1>
+              <p style={{ fontSize: '14px', color: '#64748b' }}>Pantau performa pipeline sponsorship</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px', background: '#f8fafc', borderRadius: '16px', border: '2px dashed #e2e8f0' }}>
+            <div style={{ textAlign: 'center' }}>
+              <BarChart3 size={48} color="#94a3b8" style={{ margin: '0 auto 16px' }} />
+              <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#64748b', marginBottom: '8px' }}>Belum Ada Data</h3>
+              <p style={{ fontSize: '14px', color: '#94a3b8' }}>Mulai buat brief dan proposal untuk melihat analytics</p>
+            </div>
+          </div>
+        </div>
+      </MainLayout>
+    )
+  }
+
+  // Demo mode - show mock data with indicator
+  const displayData = userType === 'demo' ? { mock: true } : realData
 
   const getMaxRevenue = () => Math.max(...monthlyData.map(d => d.revenue))
   const getMaxProposals = () => Math.max(...monthlyData.map(d => d.proposals))

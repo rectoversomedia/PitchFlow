@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MainLayout } from "@/components/layout/MainLayout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { proposals, libraryProposals } from "@/lib/mock-data"
+import { proposals as mockProposals } from "@/lib/mock-data"
+import { useAuth } from "@/lib/auth-context"
 import {
   Presentation,
   Search,
@@ -23,8 +24,37 @@ import { useRouter } from "next/navigation"
 
 export default function PresentationListPage() {
   const router = useRouter()
+  const { userType } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
+  const [proposals, setProposals] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch data based on userType
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        if (userType === 'demo') {
+          setProposals(mockProposals)
+        } else if (userType === 'new') {
+          setProposals([])
+        } else {
+          const res = await fetch('/api/proposals')
+          const data = await res.json()
+          if (data.success && data.data) {
+            setProposals(data.data)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching proposals:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    if (userType) {
+      fetchData()
+    }
+  }, [userType])
 
   const filteredProposals = proposals.filter(p => {
     const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import { MainLayout } from "@/components/layout/MainLayout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { briefs, proposals, salesComments, proposalSections, statusLabels, libraryProposals, brandExplorerData } from "@/lib/mock-data"
+import { briefs as mockBriefs, proposals as mockProposals, salesComments as mockSalesComments, proposalSections, statusLabels, libraryProposals as mockLibraryProposals, brandExplorerData } from "@/lib/mock-data"
+import { useAuth } from "@/lib/auth-context"
 import {
   ChevronLeft,
   Save,
@@ -97,14 +98,22 @@ const aiResponses = {
 // ==================== MAIN COMPONENT ====================
 export default function ProposalBuilderPage() {
   const router = useRouter()
+  const { userType, user } = useAuth()
 
-  const proposalId = null
-  const briefId = null
-  const action = null
+  // URL params
+  const [proposalId, setProposalId] = useState<string | null>(null)
+  const [briefId, setBriefId] = useState<string | null>(null)
+  const [action, setAction] = useState<string | null>(null)
+
+  // Data states
+  const [briefs, setBriefs] = useState<any[]>([])
+  const [proposals, setProposals] = useState<any[]>([])
+  const [salesComments, setSalesComments] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   // Get data based on params
   const selectedProposal = proposalId ? proposals.find(p => p.id === proposalId) : proposals[0]
-  const selectedBrief = briefId ? briefs.find(b => b.id === briefId) : briefs.find(b => b.id === "brief-1") || briefs[0]!
+  const selectedBrief = briefId ? briefs.find((b: any) => b.id === briefId) : briefs.find((b: any) => b.id === "brief-1") || briefs[0]
 
   const briefComments = salesComments.filter(c => c.proposal_id === selectedProposal?.id || c.proposal_id === "prop-1")
 
@@ -143,17 +152,60 @@ export default function ProposalBuilderPage() {
 
   // Handle action params
   useEffect(() => {
-    if (action === 'ideas') {
+    const params = new URLSearchParams(window.location.search)
+    setProposalId(params.get('proposal'))
+    setBriefId(params.get('brief'))
+    setAction(params.get('action'))
+
+    const urlAction = params.get('action')
+    if (urlAction === 'ideas') {
       setActiveAITool('ideKreatif')
       setShowAITools(true)
-    } else if (action === 'enhance') {
+    } else if (urlAction === 'enhance') {
       setActiveAITool('enhance')
       setShowAITools(true)
-    } else if (action === 'visual') {
+    } else if (urlAction === 'visual') {
       setActiveAITool('visualRef')
       setShowAITools(true)
     }
-  }, [action])
+  }, [])
+
+  // Fetch data based on userType
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        if (userType === 'demo') {
+          setBriefs(mockBriefs)
+          setProposals(mockProposals)
+          setSalesComments(mockSalesComments)
+        } else if (userType === 'new') {
+          setBriefs([])
+          setProposals([])
+          setSalesComments([])
+        } else {
+          const [briefsRes, proposalsRes, commentsRes] = await Promise.all([
+            fetch('/api/briefs'),
+            fetch('/api/proposals'),
+            fetch('/api/sales-comments')
+          ])
+          const briefsData = await briefsRes.json()
+          const proposalsData = await proposalsRes.json()
+          const commentsData = await commentsRes.json()
+
+          if (briefsData.success) setBriefs(briefsData.data || [])
+          if (proposalsData.success) setProposals(proposalsData.data || [])
+          if (commentsData.success) setSalesComments(commentsData.data || [])
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    if (userType) {
+      fetchData()
+    }
+  }, [userType])
 
   // ==================== HANDLERS ====================
   const handleSave = () => {

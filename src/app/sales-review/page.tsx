@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MainLayout } from "@/components/layout/MainLayout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { proposals, salesComments, statusLabels, currentUser } from "@/lib/mock-data"
+import { proposals as mockProposals, salesComments as mockSalesComments, statusLabels } from "@/lib/mock-data"
 import { SalesComment } from "@/lib/types"
+import { useAuth } from "@/lib/auth-context"
 import {
   Plus,
   Search,
@@ -42,17 +43,50 @@ const statusFilters = [
 
 export default function SalesReviewPage() {
   const router = useRouter()
+  const { userType } = useAuth()
 
-  const initialStatus = null as string | null
-
-  const [activeFilter, setActiveFilter] = useState(initialStatus || "all")
+  const [activeFilter, setActiveFilter] = useState("all")
   const [selectedProposalId, setSelectedProposalId] = useState<string>("prop-1")
   const [searchQuery, setSearchQuery] = useState("")
   const [newComment, setNewComment] = useState("")
-  const [comments, setComments] = useState<SalesComment[]>(salesComments)
+  const [comments, setComments] = useState<SalesComment[]>([])
+  const [proposals, setProposals] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [activeTab, setActiveTab] = useState<'comments' | 'history' | 'info'>('comments')
+
+  // Fetch data based on userType
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        if (userType === 'demo') {
+          setProposals(mockProposals)
+          setComments(mockSalesComments)
+        } else if (userType === 'new') {
+          setProposals([])
+          setComments([])
+        } else {
+          const [proposalsRes, commentsRes] = await Promise.all([
+            fetch('/api/proposals'),
+            fetch('/api/sales-comments')
+          ])
+          const proposalsData = await proposalsRes.json()
+          const commentsData = await commentsRes.json()
+
+          if (proposalsData.success) setProposals(proposalsData.data || [])
+          if (commentsData.success) setComments(commentsData.data || [])
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    if (userType) {
+      fetchData()
+    }
+  }, [userType])
 
   const selectedProposal = proposals.find(p => p.id === selectedProposalId) || proposals[0]
 

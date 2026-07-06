@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { briefs as mockBriefs } from "@/lib/mock-data"
 import { Brief } from "@/lib/types"
+import { useAuth } from "@/lib/auth-context"
 import {
   Plus,
   Search,
@@ -45,9 +46,10 @@ const briefStats = [
 
 export default function BriefIntakePage() {
   const router = useRouter()
+  const { userType, user } = useAuth()
   const [action, setAction] = useState<string | null>(null)
 
-  const [briefs, setBriefs] = useState<Brief[]>(mockBriefs)
+  const [briefs, setBriefs] = useState<Brief[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [showForm, setShowForm] = useState(action === 'new')
   const [selectedBrief, setSelectedBrief] = useState<Brief | null>(null)
@@ -81,14 +83,23 @@ export default function BriefIntakePage() {
     notes: '',
   })
 
-  // Fetch briefs from Supabase
+  // Fetch briefs from Supabase based on userType
   useEffect(() => {
     async function fetchBriefs() {
       try {
-        const res = await fetch('/api/briefs')
-        const data = await res.json()
-        if (data.success && data.data && data.data.length > 0) {
-          setBriefs(data.data)
+        if (userType === 'demo') {
+          // Demo mode - show mock data
+          setBriefs(mockBriefs)
+        } else if (userType === 'new') {
+          // New user - empty state
+          setBriefs([])
+        } else {
+          // Existing user - fetch real data
+          const res = await fetch('/api/briefs')
+          const data = await res.json()
+          if (data.success && data.data) {
+            setBriefs(data.data)
+          }
         }
       } catch (error) {
         console.error('Error fetching briefs:', error)
@@ -96,8 +107,10 @@ export default function BriefIntakePage() {
         setIsLoading(false)
       }
     }
-    fetchBriefs()
-  }, [])
+    if (userType) {
+      fetchBriefs()
+    }
+  }, [userType])
 
   const filteredBriefs = briefs.filter(brief =>
     brief.brand_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||

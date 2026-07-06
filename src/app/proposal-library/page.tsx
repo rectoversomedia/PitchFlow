@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MainLayout } from "@/components/layout/MainLayout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { libraryProposals, statusLabels, currentUser } from "@/lib/mock-data"
+import { libraryProposals as mockLibraryProposals, statusLabels } from "@/lib/mock-data"
 import { LibraryProposal } from "@/lib/types"
+import { useAuth } from "@/lib/auth-context"
 import {
   Plus,
   Search,
@@ -52,15 +53,56 @@ const tabs = [
 
 export default function ProposalLibraryPage() {
   const router = useRouter()
-  
-  const initialTab = "all"
+  const { userType } = useAuth()
 
-  const [activeTab, setActiveTab] = useState(initialTab)
+  const [activeTab, setActiveTab] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [selectedProposal, setSelectedProposal] = useState<LibraryProposal | null>(null)
   const [showDetail, setShowDetail] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [libraryProposals, setLibraryProposals] = useState<LibraryProposal[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch proposals based on userType
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        if (userType === 'demo') {
+          setLibraryProposals(mockLibraryProposals)
+        } else if (userType === 'new') {
+          setLibraryProposals([])
+        } else {
+          const res = await fetch('/api/proposals')
+          const data = await res.json()
+          if (data.success && data.data) {
+            // Transform to library format
+            const transformed = data.data.map((p: any) => ({
+              id: p.id,
+              title: p.title,
+              brand_name: p.brand_name,
+              program: p.program,
+              industry: p.industry,
+              sponsorship_type: p.sponsorship_type,
+              year: p.year,
+              status: p.result || 'pitched',
+              last_viewed: p.updated_at,
+              slides_count: p.slides_count || 0,
+              tags: []
+            }))
+            setLibraryProposals(transformed)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching proposals:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    if (userType) {
+      fetchData()
+    }
+  }, [userType])
 
   const filteredProposals = libraryProposals.filter(p => {
     const matchesTab = activeTab === 'all' || p.status === activeTab
