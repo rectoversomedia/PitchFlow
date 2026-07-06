@@ -53,6 +53,9 @@ function LoginForm() {
     setIsLoggingIn(true)
     setError("")
     try {
+      // Set demo mode in localStorage
+      localStorage.setItem('pitchflow_demo_mode', 'true')
+
       const result = await signIn("credentials", {
         type: "demo",
         redirect: false,

@@ -21,10 +21,12 @@ export function useAuth() {
   const { data: session, status } = useSession()
   const [userType, setUserType] = useState<UserType>('new')
   const [isCheckingDb, setIsCheckingDb] = useState(false)
+  const [isDemoMode, setIsDemoMode] = useState(false)
 
-  // Check if user is a demo user (from session flag)
+  // Check if user is a demo user
   const isDemoUser = (session?.user as any)?.isDemo === true ||
-                     session?.user?.email === "demo@pitchflow.app"
+                     session?.user?.email === "demo@pitchflow.app" ||
+                     isDemoMode
 
   const user: User | null = session?.user
     ? {
@@ -35,6 +37,15 @@ export function useAuth() {
         avatar: session.user.image || undefined,
       }
     : null
+
+  // Check for demo mode from localStorage or session
+  useEffect(() => {
+    // Check localStorage for demo flag
+    const storedDemo = localStorage.getItem('pitchflow_demo_mode')
+    if (storedDemo === 'true') {
+      setIsDemoMode(true)
+    }
+  }, [])
 
   // Determine user type based on authentication and data presence
   useEffect(() => {
@@ -76,6 +87,9 @@ export function useAuth() {
   }, [session?.user?.email, status, isDemoUser])
 
   const logout = async () => {
+    // Clear demo mode
+    localStorage.removeItem('pitchflow_demo_mode')
+
     const { signOut } = await import("next-auth/react")
     await signOut({ callbackUrl: "/login" })
   }
@@ -85,5 +99,11 @@ export function useAuth() {
     userType,
     isLoading: status === "loading" || isCheckingDb,
     logout,
+    setDemoMode: (value: boolean) => {
+      setIsDemoMode(value)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('pitchflow_demo_mode', value.toString())
+      }
+    }
   }
 }
