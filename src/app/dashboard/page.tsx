@@ -59,6 +59,13 @@ export default function DashboardPage() {
     }
   }
 
+  // Get user display name (clean, no emoji)
+  const getUserName = () => {
+    if (user?.name) return user.name.split(" ")[0]
+    if (userType === 'demo') return 'Demo'
+    return 'User'
+  }
+
   // Get KPI data based on user type
   const getKpiCards = () => {
     if (userType === 'demo') {
@@ -148,7 +155,7 @@ export default function DashboardPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>
-                Selamat datang, {getUserName()}! 👋
+                Selamat datang, {getUserName()}
               </h1>
               {userType === 'demo' && (
                 <Badge variant="green" style={{ fontSize: '10px' }}>DEMO</Badge>

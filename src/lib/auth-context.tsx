@@ -1,7 +1,6 @@
 "use client"
 
-import { SessionProvider, useSession } from "next-auth/react"
-import { ReactNode, useEffect, useState } from "react"
+import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { User } from "@/lib/types"
 
 export type UserType = 'demo' | 'new' | 'existing'
@@ -10,100 +9,107 @@ interface AuthContextValue {
   user: User | null
   userType: UserType
   isLoading: boolean
-  logout: () => Promise<void>
+  logout: () => void
+  loginAsDemo: () => void
+  loginWithGoogle: () => void
+  isAuthenticated: boolean
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+
+// Demo user data
+const demoUser: User = {
+  id: "demo-1",
+  name: "Demo User",
+  email: "demo@pitchflow.app",
+  role: "Supervisor",
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  return <SessionProvider>{children}</SessionProvider>
-}
-
-export function useAuth() {
-  const { data: session, status } = useSession()
+  const [user, setUser] = useState<User | null>(null)
   const [userType, setUserType] = useState<UserType>('new')
-  const [isCheckingDb, setIsCheckingDb] = useState(false)
-  const [isDemoMode, setIsDemoMode] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Check if user is a demo user
-  const isDemoUser = (session?.user as any)?.isDemo === true ||
-                     session?.user?.email === "demo@pitchflow.app" ||
-                     isDemoMode
-
-  const user: User | null = session?.user
-    ? {
-        id: session.user.id || "",
-        name: session.user.name || "",
-        email: session.user.email || "",
-        role: (session.user.role as User["role"]) || "Sales",
-        avatar: session.user.image || undefined,
-      }
-    : null
-
-  // Check for demo mode from localStorage or session
+  // Check session on mount
   useEffect(() => {
-    // Check localStorage for demo flag
-    const storedDemo = localStorage.getItem('pitchflow_demo_mode')
-    if (storedDemo === 'true') {
-      setIsDemoMode(true)
+    if (typeof window === 'undefined') {
+      setIsLoading(false)
+      return
     }
+
+    // Check localStorage for demo mode
+    const isDemo = localStorage.getItem('pitchflow_demo_mode') === 'true'
+    const storedUser = localStorage.getItem('pitchflow_user')
+
+    if (isDemo) {
+      setUser(demoUser)
+      setUserType('demo')
+    } else if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser)
+        setUser(parsedUser)
+        setUserType('existing')
+      } catch (e) {
+        console.error('Error parsing stored user:', e)
+      }
+    } else {
+      setUser(null)
+      setUserType('new')
+    }
+
+    setIsLoading(false)
   }, [])
 
-  // Determine user type based on authentication and data presence
-  useEffect(() => {
-    if (status === "loading") return
+  const loginAsDemo = () => {
+    localStorage.setItem('pitchflow_demo_mode', 'true')
+    localStorage.removeItem('pitchflow_user')
+    // Set cookie for middleware
+    document.cookie = 'pitchflow_demo=true; path=/; max-age=86400'
+    setUser(demoUser)
+    setUserType('demo')
+  }
 
-    // Demo user - always show mock data
-    if (isDemoUser) {
-      setUserType('demo')
-      return
-    }
-
-    // Not logged in with Google
-    if (!session?.user?.email) {
-      setUserType('new')
-      return
-    }
-
-    // Google user - check if they have data in Supabase
-    async function checkUserData() {
-      setIsCheckingDb(true)
-      try {
-        const response = await fetch(`/api/auth/check-user?email=${encodeURIComponent(session.user.email!)}`)
-        const data = await response.json()
-
-        if (data.hasData) {
-          setUserType('existing')
-        } else {
-          setUserType('new')
-        }
-      } catch (error) {
-        console.error('Error checking user data:', error)
-        setUserType('new')
-      } finally {
-        setIsCheckingDb(false)
-      }
-    }
-
-    checkUserData()
-  }, [session?.user?.email, status, isDemoUser])
-
-  const logout = async () => {
+  const loginWithGoogle = (googleUser?: User) => {
     // Clear demo mode
     localStorage.removeItem('pitchflow_demo_mode')
 
-    const { signOut } = await import("next-auth/react")
-    await signOut({ callbackUrl: "/login" })
-  }
-
-  return {
-    user,
-    userType,
-    isLoading: status === "loading" || isCheckingDb,
-    logout,
-    setDemoMode: (value: boolean) => {
-      setIsDemoMode(value)
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('pitchflow_demo_mode', value.toString())
-      }
+    if (googleUser) {
+      localStorage.setItem('pitchflow_user', JSON.stringify(googleUser))
+      setUser(googleUser)
+      setUserType('existing')
     }
   }
+
+  const logout = () => {
+    localStorage.removeItem('pitchflow_demo_mode')
+    localStorage.removeItem('pitchflow_user')
+    // Clear cookie
+    document.cookie = 'pitchflow_demo=; path=/; max-age=0'
+    setUser(null)
+    setUserType('new')
+    // Redirect to login
+    window.location.href = '/login'
+  }
+
+  return (
+    <AuthContext.Provider value={{
+      user,
+      userType,
+      isLoading,
+      logout,
+      loginAsDemo,
+      loginWithGoogle,
+      isAuthenticated: user !== null || userType === 'demo'
+    }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider")
+  }
+  return context
 }

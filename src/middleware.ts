@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { auth } from "@/lib/auth"
 
 // Protected routes that require authentication
 const protectedPaths = [
@@ -38,7 +37,7 @@ const publicPaths = [
   "/picthflow logo (white).png",
 ]
 
-export default auth((request: NextRequest & { auth: { user?: { id?: string } } | null }) => {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Allow public paths
@@ -71,8 +70,10 @@ export default auth((request: NextRequest & { auth: { user?: { id?: string } } |
   }
 
   if (isProtectedPath) {
-    // Check if user is authenticated
-    if (!request.auth?.user) {
+    // Check for demo mode cookie or localStorage flag via header
+    const isDemo = request.cookies.get('pitchflow_demo')?.value === 'true'
+
+    if (!isDemo) {
       // Redirect to login with callback URL
       const loginUrl = new URL("/login", request.url)
       loginUrl.searchParams.set("callbackUrl", pathname)
@@ -81,7 +82,7 @@ export default auth((request: NextRequest & { auth: { user?: { id?: string } } |
   }
 
   return NextResponse.next()
-})
+}
 
 export const config = {
   matcher: [
