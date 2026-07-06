@@ -129,8 +129,47 @@ export default function SalesReviewPage() {
   }
 
   const handleSendToSales = () => {
-    alert(`Proposal "${selectedProposal.title}" berhasil dikirim ke Sales!`)
+    if (selectedProposal) {
+      alert(`Proposal "${selectedProposal.title}" berhasil dikirim ke Sales!`)
+    }
     router.push('/dashboard')
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <Loader2 size={40} className="animate-spin" style={{ color: '#2563eb', margin: '0 auto' }} />
+            <p style={{ marginTop: '16px', color: '#64748b' }}>Loading...</p>
+          </div>
+        </div>
+      </MainLayout>
+    )
+  }
+
+  // Empty state for new users or no proposals
+  if (!selectedProposal) {
+    return (
+      <MainLayout>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '500px', padding: '32px' }}>
+          <MessageSquare size={64} color="#94a3b8" style={{ marginBottom: '16px' }} />
+          <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#64748b', marginBottom: '8px' }}>Belum Ada Proposal</h2>
+          <p style={{ color: '#94a3b8', textAlign: 'center', marginBottom: '24px' }}>
+            {userType === 'new'
+              ? 'Buat brief baru terlebih dahulu untuk memulai.'
+              : 'Belum ada proposal yang perlu direview.'}
+          </p>
+          <Link href="/brief-intake?action=new">
+            <Button style={{ backgroundColor: '#2563eb' }}>
+              <Plus size={16} style={{ marginRight: '8px' }} />
+              Buat Brief Baru
+            </Button>
+          </Link>
+        </div>
+      </MainLayout>
+    )
   }
 
   return (
