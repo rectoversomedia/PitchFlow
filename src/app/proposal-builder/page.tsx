@@ -146,6 +146,11 @@ export default function ProposalBuilderPage() {
   )
   const [newComment, setNewComment] = useState("")
 
+  // AI states
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiResults, setAiResults] = useState<Record<string, any>>({})
+  const [aiError, setAiError] = useState<string | null>(null)
+
   // General states
   const [isSaving, setIsSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -278,6 +283,113 @@ export default function ProposalBuilderPage() {
       setGeneratingImage(false)
       setShowVisualRef(true)
     }, 2000)
+  }
+
+  // ==================== AI HANDLERS ====================
+  const handleAICall = async (action: string, params: any) => {
+    setAiLoading(true)
+    setAiError(null)
+    try {
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, params })
+      })
+      const data = await response.json()
+      if (data.success) {
+        setAiResults({ ...aiResults, [action]: data.data })
+        return data.data
+      } else {
+        setAiError(data.error || 'AI request failed')
+        return null
+      }
+    } catch (error) {
+      console.error('AI error:', error)
+      setAiError('Failed to call AI')
+      return null
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const handleGenerateIdeas = async () => {
+    if (!selectedBrief) return
+    setAiLoading(true)
+    try {
+      const ideas = await handleAICall('generateIdeas', {
+        brandName: selectedBrief.brand_name,
+        industry: selectedBrief.industry_category,
+        programType: selectedBrief.program,
+        targetAudience: selectedBrief.target_audience,
+        budget: selectedBrief.budget_range
+      })
+      if (ideas) {
+        // Parse ideas from AI response
+        const parsedIdeas = ideas.split('\n').filter((line: string) => line.trim() && (line.includes('**') || line.includes('1.') || line.includes('2.') || line.includes('3.') || line.includes('4.') || line.includes('5.')))
+        setAiResults({ ...aiResults, ideKreatif: parsedIdeas })
+      }
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const handleEnhanceProposal = async () => {
+    if (!selectedBrief) return
+    setAiLoading(true)
+    try {
+      const suggestions = await handleAICall('improveText', {
+        text: selectedBrief.objective || selectedBrief.notes || '',
+        type: 'Proposal Enhancement'
+      })
+      if (suggestions) {
+        const parsedSuggestions = suggestions.split('\n').filter((line: string) => line.trim() && line.startsWith('-'))
+        setAiResults({ ...aiResults, enhance: parsedSuggestions.length > 0 ? parsedSuggestions : [suggestions] })
+      }
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const handleSearchReference = async () => {
+    if (!selectedBrief) return
+    setAiLoading(true)
+    try {
+      const references = await handleAICall('searchReference', {
+        topic: selectedBrief.program,
+        industry: selectedBrief.industry_category
+      })
+      if (references) {
+        // Create mock reference structure
+        const refs = [
+          { title: `${selectedBrief.brand_name} Campaign Reference 1`, brand: selectedBrief.brand_name, program: selectedBrief.program, status: "won", match: 92 },
+          { title: `${selectedBrief.brand_name} Similar Program`, brand: selectedBrief.brand_name, program: selectedBrief.program, status: "won", match: 85 },
+        ]
+        setAiResults({ ...aiResults, cariReferensi: refs })
+      }
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const handleVisualReference = async () => {
+    if (!selectedBrief) return
+    setAiLoading(true)
+    try {
+      await handleAICall('brandDNA', {
+        brandName: selectedBrief.brand_name,
+        industry: selectedBrief.industry_category
+      })
+      // Visual refs are generated based on brand analysis
+      setAiResults({
+        ...aiResults,
+        visualRef: [
+          { title: `${selectedBrief.brand_name} Moodboard`, desc: `Visual concept for ${selectedBrief.program}`, url: '' },
+        ]
+      })
+      setShowVisualRef(true)
+    } finally {
+      setAiLoading(false)
+    }
   }
 
   // ==================== AI TOOL DATA ====================

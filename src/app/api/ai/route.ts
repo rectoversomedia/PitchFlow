@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 
 // Rate limiting helper
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
@@ -23,29 +23,33 @@ function checkRateLimit(ip: string, maxRequests: number = 20, windowMs: number =
   }
 }
 
-// OpenAI API call helper
-async function callOpenAI(messages: any[], maxTokens: number = 2000, temperature: number = 0.7) {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+// Claude API call helper
+async function callClaude(messages: any[], maxTokens: number = 4000) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_API_KEY}`
+      'x-api-key': ANTHROPIC_API_KEY!,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
     },
     body: JSON.stringify({
-      model: 'gpt-4o',
-      messages,
+      model: 'claude-sonnet-4-20250514',
       max_tokens: maxTokens,
-      temperature,
+      messages: messages.map(m => ({
+        role: m.role === 'system' ? 'user' : m.role,
+        content: m.content
+      }))
     })
   })
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`OpenAI API Error: ${error}`)
+    throw new Error(`Claude API Error: ${error}`)
   }
 
   const data = await response.json()
-  return data.choices[0].message.content
+  return data.content[0].text
 }
 
 // Main POST handler
@@ -66,9 +70,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check API key
-    if (!OPENAI_API_KEY) {
+    if (!ANTHROPIC_API_KEY) {
       return NextResponse.json(
-        { success: false, error: 'OpenAI API key not configured' },
+        { success: false, error: 'Claude API key not configured' },
         { status: 500 }
       )
     }
@@ -138,16 +142,14 @@ async function handleBrandDNA(params: { brandName: string; industry: string; com
   const { brandName, industry, competitorBrands } = params
   const competitors = competitorBrands?.length ? `\nCompetitor Brands: ${competitorBrands.join(', ')}` : ''
 
-  return callOpenAI([
-    {
-      role: 'system',
-      content: `Kamu adalah Brand Strategist profesional yang ahli dalam menganalisis brand di pasar Indonesia.
-Kamu bisa memberikan insight mendalam tentang positioning, kompetitor, dan strategi yang efektif untuk sponsorship media broadcasting.
-Selalu berikan analisis yang actionable dan berbasis data.`
-    },
+  return callClaude([
     {
       role: 'user',
-      content: `Lakukan Deep Brand DNA Analysis untuk brand ${brandName} di industri ${industry}.${competitors}
+      content: `Kamu adalah Brand Strategist profesional yang ahli dalam menganalisis brand di pasar Indonesia.
+Kamu bisa memberikan insight mendalam tentang positioning, kompetitor, dan strategi yang efektif untuk sponsorship media broadcasting.
+Selalu berikan analisis yang actionable dan berbasis data.
+
+Lakukan Deep Brand DNA Analysis untuk brand ${brandName} di industri ${industry}.${competitors}
 
 Sertakan analisis mendalam:
 1. **Brand Positioning** - Apa yang membuat brand ini unik?
@@ -164,21 +166,19 @@ Sertakan analisis mendalam:
 Format jawaban dengan struktur yang rapi, gunakan bullet points dan headers.
 Gunakan Bahasa Indonesia yang profesional.`
     }
-  ], 3000, 0.7)
+  ], 4000)
 }
 
 async function handleAnalyzeBrand(params: { brandName: string; industry: string }) {
   const { brandName, industry } = params
 
-  return callOpenAI([
-    {
-      role: 'system',
-      content: `Kamu adalah Brand Strategist yang ahli dalam menganalisis brand di pasar Indonesia.
-Kamu tahu persis dinamika pasar dan consumer behavior di Indonesia.`
-    },
+  return callClaude([
     {
       role: 'user',
-      content: `Buatkan Brand Analysis singkat untuk ${brandName} di industri ${industry} untuk keperluan sponsorship media broadcasting.
+      content: `Kamu adalah Brand Strategist yang ahli dalam menganalisis brand di pasar Indonesia.
+Kamu tahu persis dinamika pasar dan consumer behavior di Indonesia.
+
+Buatkan Brand Analysis singkat untuk ${brandName} di industri ${industry} untuk keperluan sponsorship media broadcasting.
 
 Sertakan:
 1. Brand Overview - Deskripsi singkat brand
@@ -189,7 +189,7 @@ Sertakan:
 
 Format jawaban dalam Bahasa Indonesia yang profesional dan concise (maksimal 500 kata).`
     }
-  ], 1500, 0.6)
+  ], 2000)
 }
 
 async function handleGenerateIdeas(params: {
@@ -201,16 +201,14 @@ async function handleGenerateIdeas(params: {
 }) {
   const { brandName, industry, programType, targetAudience, budget } = params
 
-  return callOpenAI([
-    {
-      role: 'system',
-      content: `Kamu adalah Creative Director berpengalaman di industri media broadcasting Indonesia.
-Kamu ahli dalam membuat ide integrasi brand yang kreatif, inovatif, engaging, dan sesuai dengan konteks Indonesia.
-Selalu berikan ide yang actionable dan bisa langsung diimplementasikan.`
-    },
+  return callClaude([
     {
       role: 'user',
-      content: `Buatkan 5 ide integrasi kreatif untuk brand ${brandName} (${industry})
+      content: `Kamu adalah Creative Director berpengalaman di industri media broadcasting Indonesia.
+Kamu ahli dalam membuat ide integrasi brand yang kreatif, inovatif, engaging, dan sesuai dengan konteks Indonesia.
+Selalu berikan ide yang actionable dan bisa langsung diimplementasikan.
+
+Buatkan 5 ide integrasi kreatif untuk brand ${brandName} (${industry})
 yang akan menjadi sponsor di program ${programType}.
 
 Target audiens: ${targetAudience || 'Umum'}
@@ -226,7 +224,7 @@ Setiap ide harus mencakup:
 Format jawaban dalam Bahasa Indonesia dengan struktur yang rapi.
 Prioritaskan ide yang unique, engaging, dan feasible untuk diproduksi.`
     }
-  ], 2500, 0.8)
+  ], 3000)
 }
 
 async function handleGenerateProposal(params: {
@@ -237,19 +235,17 @@ async function handleGenerateProposal(params: {
   budget?: string
 }) {
   const { brandName, programName, objective, keyMessages, budget } = params
-  const messages = keyMessages?.length ? `\nKey Messages:\n${keyMessages.map((m, i) => `${i + 1}. ${m}`).join('\n')}` : ''
+  const messages = keyMessages?.length ? `\nKey Messages:\n${keyMessages.map((m: string, i: number) => `${i + 1}. ${m}`).join('\n')}` : ''
 
-  return callOpenAI([
+  return callClaude([
     {
-      role: 'system',
+      role: 'user',
       content: `Kamu adalah expert dalam membuat proposal sponsorship untuk industri media broadcasting Indonesia.
 Kamu tahu persis format dan struktur yang menarik untuk client brand.
 Selalu gunakan data dan insight yang relevan untuk Indonesia.
-Gunakan Bahasa Indonesia yang profesional dan persuasive.`
-    },
-    {
-      role: 'user',
-      content: `Buatkan konten proposal sponsorship yang profesional untuk:
+Gunakan Bahasa Indonesia yang profesional dan persuasive.
+
+Buatkan konten proposal sponsorship yang profesional untuk:
 
 **Brand:** ${brandName}
 **Program:** ${programName}
@@ -268,21 +264,19 @@ Konten harus mencakup:
 
 Buat dalam format yang professional dan persuasive untuk pitch ke client.`
     }
-  ], 3500, 0.7)
+  ], 4000)
 }
 
 async function handleSearchReference(params: { topic: string; industry?: string }) {
   const { topic, industry } = params
 
-  return callOpenAI([
-    {
-      role: 'system',
-      content: `Kamu adalah Research Analyst yang ahli dalam mencari referensi dan best practices untuk sponsorship dan brand integration di Indonesia.
-Kamu selalu memberikan contoh yang spesifik dan actionable.`
-    },
+  return callClaude([
     {
       role: 'user',
-      content: `Cari referensi dan best practices untuk:
+      content: `Kamu adalah Research Analyst yang ahli dalam mencari referensi dan best practices untuk sponsorship dan brand integration di Indonesia.
+Kamu selalu memberikan contoh yang spesifik dan actionable.
+
+Cari referensi dan best practices untuk:
 
 **Topik:** ${topic}
 **Industri:** ${industry || 'Umum'}
@@ -297,22 +291,20 @@ Sertakan:
 Gunakan contoh yang spesifik dari brand-brand terkenal di Indonesia.
 Format jawaban dalam Bahasa Indonesia.`
     }
-  ], 2500, 0.7)
+  ], 3000)
 }
 
 async function handleImproveText(params: { text: string; type?: string }) {
   const { text, type } = params
 
-  return callOpenAI([
-    {
-      role: 'system',
-      content: `Kamu adalah Proposal Writer profesional yang ahli dalam membuat proposal sponsorship yang persuasive.
-Kamu akan improve teks yang sudah ada agar lebih compelling, profesional, dan persuasive.
-Pertahankan inti pesan, hanya improve execution.`
-    },
+  return callClaude([
     {
       role: 'user',
-      content: `Improve teks proposal berikut agar lebih professional dan persuasive:
+      content: `Kamu adalah Proposal Writer profesional yang ahli dalam membuat proposal sponsorship yang persuasive.
+Kamu akan improve teks yang sudah ada agar lebih compelling, profesional, dan persuasive.
+Pertahankan inti pesan, hanya improve execution.
+
+Improve teks proposal berikut agar lebih professional dan persuasive:
 
 **Type:** ${type || 'Proposal'}
 **Original Text:**
@@ -327,21 +319,19 @@ Improve:
 
 Return hasil improved text dalam Bahasa Indonesia.`
     }
-  ], 2000, 0.7)
+  ], 2500)
 }
 
 async function handleTrendAnalysis(params: { industry?: string; category?: string }) {
   const { industry, category } = params
 
-  return callOpenAI([
-    {
-      role: 'system',
-      content: `Kamu adalah Market Research Analyst yang ahli dalam menganalisis tren pasar dan media di Indonesia.
-Kamu selalu up-to-date dengan perkembangan terbaru dan bisa memberikan insight yang actionable.`
-    },
+  return callClaude([
     {
       role: 'user',
-      content: `Buatkan Trend Analysis untuk pasar sponsorship media broadcasting Indonesia.
+      content: `Kamu adalah Market Research Analyst yang ahli dalam menganalisis tren pasar dan media di Indonesia.
+Kamu selalu up-to-date dengan perkembangan terbaru dan bisa memberikan insight yang actionable.
+
+Buatkan Trend Analysis untuk pasar sponsorship media broadcasting Indonesia.
 
 **Industri:** ${industry || 'Umum'}
 **Kategori:** ${category || 'Sponsorship'}
@@ -359,21 +349,19 @@ Sertakan:
 Gunakan data dan contoh spesifik dari pasar Indonesia.
 Format jawaban dalam Bahasa Indonesia yang professional.`
     }
-  ], 3000, 0.7)
+  ], 4000)
 }
 
 async function handleAudienceInsights(params: { industry?: string; demographic?: string }) {
   const { industry, demographic } = params
 
-  return callOpenAI([
-    {
-      role: 'system',
-      content: `Kamu adalah Audience Research Expert yang ahli dalam menganalisis perilaku dan preferensi audiens di Indonesia.
-Kamu tahu persis karakteristik berbagai segmen audiens dan bagaimana mereka consuming media.`
-    },
+  return callClaude([
     {
       role: 'user',
-      content: `Buatkan Audience Insights untuk:
+      content: `Kamu adalah Audience Research Expert yang ahli dalam menganalisis perilaku dan preferensi audiens di Indonesia.
+Kamu tahu persis karakteristik berbagai segmen audiens dan bagaimana mereka consuming media.
+
+Buatkan Audience Insights untuk:
 
 **Industri:** ${industry || 'Umum'}
 **Demographic:** ${demographic || 'Umum'}
@@ -392,7 +380,7 @@ Sertakan:
 Gunakan data yang relevan untuk pasar Indonesia.
 Format jawaban dalam Bahasa Indonesia yang professional.`
     }
-  ], 3000, 0.7)
+  ], 4000)
 }
 
 async function handleCalculateROI(params: {
@@ -403,15 +391,13 @@ async function handleCalculateROI(params: {
 }) {
   const { budget, program, expectedReach, duration } = params
 
-  return callOpenAI([
-    {
-      role: 'system',
-      content: `Kamu adalah Marketing Analytics Expert yang ahli dalam menghitung ROI dan membuat business case untuk sponsorship.
-Kamu tahu standar industri dan best practices dalam mengukur efektivitas sponsorship.`
-    },
+  return callClaude([
     {
       role: 'user',
-      content: `Buatkan ROI Analysis dan Business Case untuk sponsorship proposal:
+      content: `Kamu adalah Marketing Analytics Expert yang ahli dalam menghitung ROI dan membuat business case untuk sponsorship.
+Kamu tahu standar industri dan best practices dalam mengukur efektivitas sponsorship.
+
+Buatkan ROI Analysis dan Business Case untuk sponsorship proposal:
 
 **Budget:** ${budget}
 **Program:** ${program}
@@ -433,5 +419,5 @@ Sertakan:
 Gunakan angka-angka yang realistic dan defensible.
 Format jawaban dalam Bahasa Indonesia yang professional dan persuasive.`
     }
-  ], 3000, 0.6)
+  ], 4000)
 }
