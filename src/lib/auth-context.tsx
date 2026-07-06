@@ -14,7 +14,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <SessionProvider>{children}</SessionProvider>
 }
 
-export type UserType = 'demo' | 'new' | 'supervisor' | 'acs' | 'sales'
+export type UserType = 'demo' | 'new' | 'existing' | 'supervisor' | 'acs' | 'sales'
 
 export function useAuth() {
   const { data: session, status } = useSession()
