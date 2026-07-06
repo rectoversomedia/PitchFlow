@@ -111,9 +111,11 @@ export default function ProposalBuilderPage() {
   const [salesComments, setSalesComments] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Get data based on params
+  // Get data based on params (with SSR safety)
   const selectedProposal = proposalId ? proposals.find(p => p.id === proposalId) : proposals[0]
-  const selectedBrief = briefId ? briefs.find((b: any) => b.id === briefId) : briefs.find((b: any) => b.id === "brief-1") || briefs[0]
+  const selectedBrief = briefId
+    ? briefs.find((b: any) => b.id === briefId)
+    : briefs[0] || null
 
   const briefComments = salesComments.filter(c => c.proposal_id === selectedProposal?.id || c.proposal_id === "prop-1")
 
@@ -322,6 +324,43 @@ export default function ProposalBuilderPage() {
       bg: "#fef2f2"
     },
   ]
+
+  // Loading or no data state
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <Loader2 size={40} className="animate-spin" style={{ color: '#2563eb', margin: '0 auto' }} />
+            <p style={{ marginTop: '16px', color: '#64748b' }}>Loading...</p>
+          </div>
+        </div>
+      </MainLayout>
+    )
+  }
+
+  // Empty state for new users
+  if (!selectedBrief) {
+    return (
+      <MainLayout>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '500px', padding: '32px' }}>
+          <FileText size={64} color="#94a3b8" style={{ marginBottom: '16px' }} />
+          <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#64748b', marginBottom: '8px' }}>Belum Ada Brief</h2>
+          <p style={{ color: '#94a3b8', textAlign: 'center', marginBottom: '24px' }}>
+            {userType === 'new'
+              ? 'Mulai dengan membuat brief baru terlebih dahulu.'
+              : 'Pilih brief dari daftar atau buat brief baru.'}
+          </p>
+          <Link href="/brief-intake?action=new">
+            <Button style={{ backgroundColor: '#2563eb' }}>
+              <Plus size={16} style={{ marginRight: '8px' }} />
+              Buat Brief Baru
+            </Button>
+          </Link>
+        </div>
+      </MainLayout>
+    )
+  }
 
   return (
     <MainLayout>
