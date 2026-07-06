@@ -43,7 +43,7 @@ const statusFilters = [
 
 export default function SalesReviewPage() {
   const router = useRouter()
-  const { userType } = useAuth()
+  const { userType, user } = useAuth()
 
   const [activeFilter, setActiveFilter] = useState("all")
   const [selectedProposalId, setSelectedProposalId] = useState<string>("prop-1")
@@ -107,22 +107,21 @@ export default function SalesReviewPage() {
   const handleSendComment = () => {
     if (!newComment.trim()) return
     setIsSending(true)
-    setTimeout(() => {
-      const comment: SalesComment = {
-        id: `comment-${Date.now()}`,
-        proposal_id: selectedProposalId,
-        user_id: currentUser.id,
-        user_name: currentUser.name,
-        user_role: "Supervisor",
-        content: newComment,
-        timestamp: "Baru saja"
-      }
-      setComments([...comments, comment])
-      setNewComment("")
-      setIsSending(false)
-      setSent(true)
-      setTimeout(() => setSent(false), 2000)
-    }, 1000)
+
+    const comment: SalesComment = {
+      id: `comment-${Date.now()}`,
+      proposal_id: selectedProposalId,
+      user_id: user?.id || 'anonymous',
+      user_name: user?.name || 'User',
+      user_role: "Supervisor" as const,
+      content: newComment,
+      timestamp: "Baru saja"
+    }
+    setComments([...comments, comment])
+    setNewComment("")
+    setIsSending(false)
+    setSent(true)
+    setTimeout(() => setSent(false), 2000)
   }
 
   const handleUpdateStatus = (status: string) => {
