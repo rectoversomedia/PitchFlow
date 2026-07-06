@@ -1,4 +1,4 @@
-import { DefaultSession, DefaultUser } from "next-auth"
+import { DefaultSession } from "next-auth"
 import { DefaultJWT } from "next-auth/jwt"
 
 export type User = {
@@ -19,10 +19,6 @@ declare module "next-auth" {
       image?: string | null
       role?: string
     } & DefaultSession["user"]
-  }
-
-  interface User extends DefaultUser {
-    role?: string
   }
 }
 
