@@ -1,11 +1,14 @@
 "use client"
 
 import { SessionProvider, useSession } from "next-auth/react"
-import { ReactNode } from "react"
+import { ReactNode, useEffect, useState } from "react"
 import { User } from "@/lib/types"
 
-interface AuthContextType {
+export type UserType = 'demo' | 'new' | 'existing'
+
+interface AuthContextValue {
   user: User | null
+  userType: UserType
   isLoading: boolean
   logout: () => Promise<void>
 }
@@ -14,10 +17,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <SessionProvider>{children}</SessionProvider>
 }
 
-export type UserType = 'demo' | 'new' | 'existing' | 'supervisor' | 'acs' | 'sales'
-
 export function useAuth() {
   const { data: session, status } = useSession()
+  const [userType, setUserType] = useState<UserType>('new')
+  const [isCheckingDb, setIsCheckingDb] = useState(false)
+
+  // Check if user is a demo user (from session flag)
+  const isDemoUser = (session?.user as any)?.isDemo === true ||
+                     session?.user?.email === "demo@pitchflow.app"
 
   const user: User | null = session?.user
     ? {
@@ -29,8 +36,44 @@ export function useAuth() {
       }
     : null
 
-  // For demo mode, set userType to demo
-  const isDemo = !session?.user && status !== "loading"
+  // Determine user type based on authentication and data presence
+  useEffect(() => {
+    if (status === "loading") return
+
+    // Demo user - always show mock data
+    if (isDemoUser) {
+      setUserType('demo')
+      return
+    }
+
+    // Not logged in with Google
+    if (!session?.user?.email) {
+      setUserType('new')
+      return
+    }
+
+    // Google user - check if they have data in Supabase
+    async function checkUserData() {
+      setIsCheckingDb(true)
+      try {
+        const response = await fetch(`/api/auth/check-user?email=${encodeURIComponent(session.user.email!)}`)
+        const data = await response.json()
+
+        if (data.hasData) {
+          setUserType('existing')
+        } else {
+          setUserType('new')
+        }
+      } catch (error) {
+        console.error('Error checking user data:', error)
+        setUserType('new')
+      } finally {
+        setIsCheckingDb(false)
+      }
+    }
+
+    checkUserData()
+  }, [session?.user?.email, status, isDemoUser])
 
   const logout = async () => {
     const { signOut } = await import("next-auth/react")
@@ -38,14 +81,9 @@ export function useAuth() {
   }
 
   return {
-    user: isDemo ? {
-      id: "demo-1",
-      name: "Demo User",
-      email: "demo@pitchflow.app",
-      role: "Supervisor" as User["role"],
-    } : user,
-    userType: (isDemo ? "demo" : user?.role?.toLowerCase()) as UserType,
-    isLoading: status === "loading",
+    user,
+    userType,
+    isLoading: status === "loading" || isCheckingDb,
     logout,
   }
 }

@@ -22,13 +22,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             id: "demo-1",
             name: "Demo User",
             email: "demo@pitchflow.app",
-          }
-        }
-        if (credentials?.type === "existing" && credentials?.email) {
-          return {
-            id: "user-1",
-            name: "Fajar Pahlawan H.",
-            email: credentials.email as string,
+            isDemo: true,
           }
         }
         return null
@@ -37,27 +31,39 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      // For Google OAuth, try to create/fetch user from Supabase
+      // For Google OAuth, create user in Supabase if not exists
       if (account?.provider === "google" && user.email) {
         try {
           const supabase = await createClient()
 
-          // Check if user exists
+          // Check if user exists in users table
           const { data: existingUser } = await supabase
             .from("users")
-            .select("*")
+            .select("id, role")
             .eq("email", user.email)
             .single()
 
           if (!existingUser) {
-            // Create new user
-            await supabase.from("users").insert({
-              id: user.id!,
-              name: user.name || user.email.split("@")[0],
-              email: user.email,
-              role: "Sales", // Default role
-              avatar_url: user.image,
-            })
+            // Create new user with default role
+            const { data: newUser, error } = await supabase
+              .from("users")
+              .insert({
+                id: user.id!,
+                name: user.name || user.email.split("@")[0],
+                email: user.email,
+                role: "Sales", // Default role for new users
+                avatar_url: user.image,
+              })
+              .select("id, role")
+              .single()
+
+            if (error) {
+              console.error("Error creating user:", error)
+            } else {
+              console.log("New user created:", newUser)
+            }
+          } else {
+            console.log("Existing user:", existingUser)
           }
         } catch (error) {
           console.error("Supabase sync error:", error)
@@ -66,15 +72,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true
     },
     async jwt({ token, user, account }) {
-      // Initial sign in
       if (user) {
         token.id = user.id
+        // Mark demo users
+        token.isDemo = (user as any).isDemo === true ||
+                       user.email === "demo@pitchflow.app" ||
+                       user.email?.includes("demo")
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
+        ;(session.user as any).isDemo = token.isDemo as boolean
       }
       return session
     },
