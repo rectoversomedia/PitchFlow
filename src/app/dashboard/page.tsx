@@ -39,9 +39,17 @@ export default function DashboardPage() {
   const [briefs, setBriefs] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Get user display name
+  // Get user display name (clean, no emoji)
   const getUserName = () => {
     if (user?.name) return user.name.split(" ")[0]
+    if (userType === 'demo') return 'Demo'
+    return 'User'
+  }
+
+  // Get user display name (clean, no emoji)
+  const getUserName = () => {
+    if (user?.name) return user.name.split(" ")[0]
+    if (userType === 'demo') return 'Demo'
     return 'User'
   }
 
@@ -57,13 +65,6 @@ export default function DashboardPage() {
       default:
         return 'Berikut ringkasan pipeline proposal sponsorship Anda'
     }
-  }
-
-  // Get user display name (clean, no emoji)
-  const getUserName = () => {
-    if (user?.name) return user.name.split(" ")[0]
-    if (userType === 'demo') return 'Demo'
-    return 'User'
   }
 
   // Get KPI data based on user type
