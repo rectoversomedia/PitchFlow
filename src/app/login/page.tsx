@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { signIn } from "next-auth/react"
 import { useSession } from "next-auth/react"
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { data: session, status } = useSession()
@@ -684,5 +684,53 @@ export default function LoginPage() {
         }
       `}</style>
     </div>
+  )
+}
+
+function LoginLoading() {
+  return (
+    <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ textAlign: "center" }}>
+        <svg
+          style={{
+            width: 40,
+            height: 40,
+            animation: "spin 1s linear infinite",
+          }}
+          viewBox="0 0 24 24"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            fill="none"
+            stroke="#e2e8f0"
+            strokeWidth="3"
+          />
+          <path
+            d="M12 2a10 10 0 0110 10"
+            fill="none"
+            stroke="#2563eb"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+        </svg>
+        <p style={{ marginTop: 16, color: "#64748b" }}>Loading...</p>
+      </div>
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginLoading />}>
+      <LoginForm />
+    </Suspense>
   )
 }
