@@ -5,7 +5,7 @@ import { MainLayout } from "@/components/layout/MainLayout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
-import { libraryProposals as mockLibraryProposals, statusLabels } from "@/lib/mock-data"
+import { statusLabels } from "@/lib/mock-data"
 import {
   BarChart3,
   TrendingUp,
