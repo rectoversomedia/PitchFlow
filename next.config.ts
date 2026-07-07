@@ -46,9 +46,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   // Turbopack config
-  turbopack: {
-    // Build configuration
-  },
+  turbopack: {},
+
   // Output directory
   distDir: ".next",
 
@@ -70,31 +69,22 @@ const nextConfig: NextConfig = {
         hostname: '**',
       },
     ],
-    // Optimize images
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
   },
 
   // Experimental features
   experimental: {
-    // Enable server actions
     serverActions: {
       bodySizeLimit: '2mb',
     },
-    // Optimize package imports
     optimizePackageImports: ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
   },
 
-  // Compiler options for performance
+  // Compiler options
   compiler: {
-    // Remove console logs in production
     removeConsole: process.env.NODE_ENV === 'production',
   },
 }
 
-// Bundle analyzer configuration (optional - run with ANALYZE=true)
-const withBundleAnalyzer = (await import('@next/bundle-analyzer')).default
-
-export default process.env.ANALYZE === 'true'
-  ? withBundleAnalyzer({ enabled: true })(nextConfig)
-  : nextConfig
+export default nextConfig;
