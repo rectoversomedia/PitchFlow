@@ -42,55 +42,24 @@ export default function DashboardPage() {
   // Get user display name (clean, no emoji)
   const getUserName = () => {
     if (user?.name) return user.name.split(" ")[0]
-    if (userType === 'demo') return 'Demo'
-    return 'User'
-  }
-
-  // Get user display name (clean, no emoji)
-  const getUserName = () => {
-    if (user?.name) return user.name.split(" ")[0]
-    if (userType === 'demo') return 'Demo'
     return 'User'
   }
 
   // Get greeting based on user type
   const getGreeting = () => {
-    switch (userType) {
-      case 'demo':
-        return 'Demo mode - Data sample untuk percobaan'
-      case 'new':
-        return 'Mulai workflow baru dengan data kosong'
-      case 'existing':
-        return 'Berikut ringkasan pipeline proposal sponsorship Anda'
-      default:
-        return 'Berikut ringkasan pipeline proposal sponsorship Anda'
+    if (user?.name) {
+      return `Selamat datang, ${user.name.split(" ")[0]}!`
     }
+    return 'Selamat datang!'
   }
 
-  // Get KPI data based on user type
+  // Get KPI data
   const getKpiCards = () => {
-    if (userType === 'demo') {
-      return [
-        { title: "New Briefs", value: 7, change: "+16%", icon: FileText, bgColor: "#dbeafe", iconColor: "#2563eb", borderColor: "#93c5fd", href: "/brief-intake?status=new" },
-        { title: "In Progress", value: 18, change: "+12%", icon: TrendingUp, bgColor: "#fef3c7", iconColor: "#d97706", borderColor: "#fcd34d", href: "/brief-intake?status=in_progress" },
-        { title: "Waiting Feedback", value: 9, change: "+29%", icon: Clock, bgColor: "#f3e8ff", iconColor: "#9333ea", borderColor: "#c4b5fd", href: "/sales-review?status=waiting" },
-        { title: "Ready for Sales", value: 11, change: "+10%", icon: CheckCircle, bgColor: "#dcfce7", iconColor: "#16a34a", borderColor: "#86efac", href: "/sales-review?status=ready" },
-      ]
-    }
-    if (userType === 'new') {
-      return [
-        { title: "New Briefs", value: 0, change: "0%", icon: FileText, bgColor: "#dbeafe", iconColor: "#2563eb", borderColor: "#93c5fd", href: "/brief-intake?status=new" },
-        { title: "In Progress", value: 0, change: "0%", icon: TrendingUp, bgColor: "#fef3c7", iconColor: "#d97706", borderColor: "#fcd34d", href: "/brief-intake?status=in_progress" },
-        { title: "Waiting Feedback", value: 0, change: "0%", icon: Clock, bgColor: "#f3e8ff", iconColor: "#9333ea", borderColor: "#c4b5fd", href: "/sales-review?status=waiting" },
-        { title: "Ready for Sales", value: 0, change: "0%", icon: CheckCircle, bgColor: "#dcfce7", iconColor: "#16a34a", borderColor: "#86efac", href: "/sales-review?status=ready" },
-      ]
-    }
-    // existing user - show real data
     return [
-      { title: "New Briefs", value: briefs.filter(b => b.status === 'new').length, change: "", icon: FileText, bgColor: "#dbeafe", iconColor: "#2563eb", borderColor: "#93c5fd", href: "/brief-intake?status=new" },
-      { title: "In Progress", value: briefs.filter(b => b.status === 'in_progress').length, change: "", icon: TrendingUp, bgColor: "#fef3c7", iconColor: "#d97706", borderColor: "#fcd34d", href: "/brief-intake?status=in_progress" },
-      { title: "Waiting Feedback", value: proposals.filter(p => p.status === 'need_input').length, change: "", icon: Clock, bgColor: "#f3e8ff", iconColor: "#9333ea", borderColor: "#c4b5fd", href: "/sales-review?status=waiting" },
-      { title: "Ready for Sales", value: proposals.filter(p => p.status === 'ready').length, change: "", icon: CheckCircle, bgColor: "#dcfce7", iconColor: "#16a34a", borderColor: "#86efac", href: "/sales-review?status=ready" },
+      { title: "New Briefs", value: briefs.filter((b: any) => b.status === 'new').length, change: "", icon: FileText, bgColor: "#dbeafe", iconColor: "#2563eb", borderColor: "#93c5fd", href: "/brief-intake?status=new" },
+      { title: "In Progress", value: briefs.filter((b: any) => b.status === 'in_progress').length, change: "", icon: TrendingUp, bgColor: "#fef3c7", iconColor: "#d97706", borderColor: "#fcd34d", href: "/brief-intake?status=in_progress" },
+      { title: "Waiting Feedback", value: proposals.filter((p: any) => p.status === 'need_input').length, change: "", icon: Clock, bgColor: "#f3e8ff", iconColor: "#9333ea", borderColor: "#c4b5fd", href: "/sales-review?status=waiting" },
+      { title: "Ready for Sales", value: proposals.filter((p: any) => p.status === 'ready').length, change: "", icon: CheckCircle, bgColor: "#dcfce7", iconColor: "#16a34a", borderColor: "#86efac", href: "/sales-review?status=ready" },
     ]
   }
 
