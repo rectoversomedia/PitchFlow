@@ -117,7 +117,7 @@ function LoginForm() {
           {/* Logo */}
           <div style={{ marginBottom: 48 }}>
             <Image
-              src="/picthflow logo (white).png"
+              src="/PitchFlow Logo (white).png"
               alt="PitchFlow"
               width={240}
               height={68}

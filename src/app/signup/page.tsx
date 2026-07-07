@@ -110,7 +110,7 @@ export default function SignupPage() {
           width: '100%'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <Image src="/picthflow logo (white).png" alt="PitchFlow" width={140} height={40} style={{ objectFit: 'contain' }} />
+            <Image src="/PitchFlow Logo (white).png" alt="PitchFlow" width={140} height={40} style={{ objectFit: 'contain' }} />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 48 }}>

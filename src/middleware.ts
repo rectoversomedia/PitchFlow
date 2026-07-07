@@ -30,7 +30,7 @@ const publicPaths = [
   "/api/ai",
   "/_next",
   "/favicon.ico",
-  "/picthflow logo (white).png",
+  "/PitchFlow Logo (white).png",
 ]
 
 export async function middleware(request: NextRequest) {

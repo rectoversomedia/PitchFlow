@@ -99,7 +99,7 @@ export function Sidebar() {
             borderBottom: '1px solid #1e293b',
           }}
         >
-          <Image src="/picthflow logo (white).png" alt="PitchFlow" width={140} height={40} style={{ objectFit: 'contain' }} />
+          <Image src="/PitchFlow Logo (white).png" alt="PitchFlow" width={140} height={40} style={{ objectFit: 'contain' }} />
         </div>
 
         {/* Navigation Section */}
