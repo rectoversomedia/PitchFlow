@@ -2,8 +2,12 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
-  "installCommand": "npm install",
+  "installCommand": "npm ci",
   "regions": ["sin1"],
+  "github": {
+    "silent": false,
+    "autoJobCancelation": true
+  },
   "headers": [
     {
       "source": "/api/ai",

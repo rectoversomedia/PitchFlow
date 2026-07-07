@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/api-auth'
+import { createServerClient } from '@/lib/supabase/server'
 
-// GET - Fetch all briefs
+// GET - Fetch user's briefs
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    // Require authentication
+    const authUser = await requireAuth(request)
+    if (authUser instanceof NextResponse) return authUser
+
+    const supabase = await createServerClient()
 
     const { data: briefs, error } = await supabase
       .from('briefs')
       .select('*')
+      .eq('created_by', authUser.id) // User isolation via RLS
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -35,7 +41,11 @@ export async function GET(request: NextRequest) {
 // POST - Create new brief
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    // Require authentication
+    const authUser = await requireAuth(request)
+    if (authUser instanceof NextResponse) return authUser
+
+    const supabase = await createServerClient()
     const body = await request.json()
 
     // Validate required fields
@@ -64,7 +74,7 @@ export async function POST(request: NextRequest) {
         notes: body.notes || null,
         attachments: body.attachments || [],
         status: 'new',
-        created_by: body.created_by || null,
+        created_by: authUser.id, // Always use authenticated user's ID
       })
       .select()
       .single()
@@ -93,13 +103,38 @@ export async function POST(request: NextRequest) {
 // PUT - Update brief
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    // Require authentication
+    const authUser = await requireAuth(request)
+    if (authUser instanceof NextResponse) return authUser
+
+    const supabase = await createServerClient()
     const body = await request.json()
 
     if (!body.id) {
       return NextResponse.json(
         { success: false, error: 'Brief ID is required' },
         { status: 400 }
+      )
+    }
+
+    // First verify the brief belongs to this user (extra security layer)
+    const { data: existingBrief } = await supabase
+      .from('briefs')
+      .select('created_by')
+      .eq('id', body.id)
+      .single()
+
+    if (!existingBrief) {
+      return NextResponse.json(
+        { success: false, error: 'Brief not found' },
+        { status: 404 }
+      )
+    }
+
+    if (existingBrief.created_by !== authUser.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - You can only update your own briefs' },
+        { status: 403 }
       )
     }
 
@@ -150,7 +185,11 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete brief
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    // Require authentication
+    const authUser = await requireAuth(request)
+    if (authUser instanceof NextResponse) return authUser
+
+    const supabase = await createServerClient()
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -158,6 +197,27 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Brief ID is required' },
         { status: 400 }
+      )
+    }
+
+    // First verify the brief belongs to this user (extra security layer)
+    const { data: existingBrief } = await supabase
+      .from('briefs')
+      .select('created_by')
+      .eq('id', id)
+      .single()
+
+    if (!existingBrief) {
+      return NextResponse.json(
+        { success: false, error: 'Brief not found' },
+        { status: 404 }
+      )
+    }
+
+    if (existingBrief.created_by !== authUser.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - You can only delete your own briefs' },
+        { status: 403 }
       )
     }
 

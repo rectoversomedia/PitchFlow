@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/api-auth'
+import { createServerClient } from '@/lib/supabase/server'
 
-// GET - Fetch all clients
+// GET - Fetch user's clients
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    // Require authentication
+    const authUser = await requireAuth(request)
+    if (authUser instanceof NextResponse) return authUser
+
+    const supabase = await createServerClient()
 
     const { data: clients, error } = await supabase
       .from('clients')
       .select('*')
+      .eq('created_by', authUser.id) // User isolation via RLS
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -35,7 +41,11 @@ export async function GET(request: NextRequest) {
 // POST - Create new client
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    // Require authentication
+    const authUser = await requireAuth(request)
+    if (authUser instanceof NextResponse) return authUser
+
+    const supabase = await createServerClient()
     const body = await request.json()
 
     if (!body.name) {
@@ -56,7 +66,7 @@ export async function POST(request: NextRequest) {
         industry: body.industry || null,
         address: body.address || null,
         notes: body.notes || null,
-        created_by: body.created_by || null,
+        created_by: authUser.id, // Always use authenticated user's ID
       })
       .select()
       .single()
@@ -85,13 +95,38 @@ export async function POST(request: NextRequest) {
 // PUT - Update client
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    // Require authentication
+    const authUser = await requireAuth(request)
+    if (authUser instanceof NextResponse) return authUser
+
+    const supabase = await createServerClient()
     const body = await request.json()
 
     if (!body.id) {
       return NextResponse.json(
         { success: false, error: 'Client ID is required' },
         { status: 400 }
+      )
+    }
+
+    // First verify the client belongs to this user (extra security layer)
+    const { data: existingClient } = await supabase
+      .from('clients')
+      .select('created_by')
+      .eq('id', body.id)
+      .single()
+
+    if (!existingClient) {
+      return NextResponse.json(
+        { success: false, error: 'Client not found' },
+        { status: 404 }
+      )
+    }
+
+    if (existingClient.created_by !== authUser.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - You can only update your own clients' },
+        { status: 403 }
       )
     }
 
@@ -135,7 +170,11 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete client
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    // Require authentication
+    const authUser = await requireAuth(request)
+    if (authUser instanceof NextResponse) return authUser
+
+    const supabase = await createServerClient()
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -143,6 +182,27 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Client ID is required' },
         { status: 400 }
+      )
+    }
+
+    // First verify the client belongs to this user (extra security layer)
+    const { data: existingClient } = await supabase
+      .from('clients')
+      .select('created_by')
+      .eq('id', id)
+      .single()
+
+    if (!existingClient) {
+      return NextResponse.json(
+        { success: false, error: 'Client not found' },
+        { status: 404 }
+      )
+    }
+
+    if (existingClient.created_by !== authUser.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - You can only delete your own clients' },
+        { status: 403 }
       )
     }
 

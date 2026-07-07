@@ -9,8 +9,62 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "PitchFlow by Rectoverso",
-  description: "AI-assisted sponsorship proposal workspace that helps teams turn Sales briefs into stronger sponsorship proposals through structured intake, proposal library, AI-powered idea generation, and Sales collaboration.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://pitchflow.vercel.app'),
+  title: {
+    default: 'PitchFlow - AI-Powered Sponsorship Proposals',
+    template: '%s | PitchFlow',
+  },
+  description: 'AI-assisted sponsorship proposal workspace that helps teams turn Sales briefs into stronger sponsorship proposals through structured intake, proposal library, AI-powered idea generation, and Sales collaboration.',
+  keywords: [
+    'sponsorship',
+    'proposal',
+    'AI',
+    'media',
+    'sales',
+    'pitch',
+    'branding',
+    'advertising',
+    'marketing',
+    'Indonesia',
+  ],
+  authors: [{ name: 'Rectoverso Media', url: 'https://rectoverso.com' }],
+  creator: 'Rectoverso Media',
+  publisher: 'Rectoverso Media',
+  openGraph: {
+    type: 'website',
+    locale: 'id_ID',
+    alternateLocale: 'en_US',
+    url: '/',
+    siteName: 'PitchFlow',
+    title: 'PitchFlow - AI-Powered Sponsorship Proposals',
+    description: 'AI-assisted sponsorship proposal workspace that helps teams turn Sales briefs into stronger sponsorship proposals.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'PitchFlow - AI-Powered Sponsorship Proposals',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'PitchFlow - AI-Powered Sponsorship Proposals',
+    description: 'AI-assisted sponsorship proposal workspace that helps teams turn Sales briefs into stronger sponsorship proposals.',
+    images: ['/og-image.png'],
+    creator: '@rectoverso',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   icons: {
     icon: [
       {
@@ -18,7 +72,9 @@ export const metadata: Metadata = {
         type: "image/svg+xml",
       },
     ],
+    apple: '/apple-touch-icon.png',
   },
+  manifest: '/manifest.json',
 }
 
 export default function RootLayout({

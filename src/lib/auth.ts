@@ -9,25 +9,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
-    Credentials({
-      name: "Demo Login",
-      credentials: {
-        type: { label: "type", type: "text" },
-        email: { label: "email", type: "text" },
-      },
-      async authorize(credentials) {
-        // Demo user simulation
-        if (credentials?.type === "demo") {
-          return {
-            id: "demo-1",
-            name: "Demo User",
-            email: "demo@pitchflow.app",
-            isDemo: true,
-          }
-        }
-        return null
-      },
-    }),
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
@@ -74,17 +55,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id
-        // Mark demo users
-        token.isDemo = (user as any).isDemo === true ||
-                       user.email === "demo@pitchflow.app" ||
-                       user.email?.includes("demo")
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
-        ;(session.user as any).isDemo = token.isDemo as boolean
       }
       return session
     },

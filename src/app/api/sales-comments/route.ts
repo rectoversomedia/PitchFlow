@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/api-auth'
+import { createServerClient } from '@/lib/supabase/server'
 
-// GET - Fetch all sales comments
+// GET - Fetch user's sales comments
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    // Require authentication
+    const authUser = await requireAuth(request)
+    if (authUser instanceof NextResponse) return authUser
+
+    const supabase = await createServerClient()
 
     const { data: comments, error } = await supabase
       .from('sales_comments')
@@ -12,6 +17,7 @@ export async function GET(request: NextRequest) {
         *,
         users (name, role)
       `)
+      .eq('user_id', authUser.id) // User isolation via RLS
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -45,7 +51,11 @@ export async function GET(request: NextRequest) {
 // POST - Create new comment
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    // Require authentication
+    const authUser = await requireAuth(request)
+    if (authUser instanceof NextResponse) return authUser
+
+    const supabase = await createServerClient()
     const body = await request.json()
 
     if (!body.proposal_id || !body.content) {
@@ -59,7 +69,7 @@ export async function POST(request: NextRequest) {
       .from('sales_comments')
       .insert({
         proposal_id: body.proposal_id,
-        user_id: body.user_id || null,
+        user_id: authUser.id, // Always use authenticated user's ID
         content: body.content,
         parent_id: body.parent_id || null,
       })
@@ -80,8 +90,8 @@ export async function POST(request: NextRequest) {
     // Transform response
     const transformedComment = {
       ...newComment,
-      user_name: newComment.users?.name || 'Unknown',
-      user_role: newComment.users?.role || 'Unknown',
+      user_name: newComment.users?.name || authUser.name || 'Unknown',
+      user_role: newComment.users?.role || authUser.role || 'Unknown',
     }
 
     return NextResponse.json({
@@ -100,7 +110,11 @@ export async function POST(request: NextRequest) {
 // DELETE - Delete comment
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    // Require authentication
+    const authUser = await requireAuth(request)
+    if (authUser instanceof NextResponse) return authUser
+
+    const supabase = await createServerClient()
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -108,6 +122,27 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Comment ID is required' },
         { status: 400 }
+      )
+    }
+
+    // First verify the comment belongs to this user (extra security layer)
+    const { data: existingComment } = await supabase
+      .from('sales_comments')
+      .select('user_id')
+      .eq('id', id)
+      .single()
+
+    if (!existingComment) {
+      return NextResponse.json(
+        { success: false, error: 'Comment not found' },
+        { status: 404 }
+      )
+    }
+
+    if (existingComment.user_id !== authUser.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized - You can only delete your own comments' },
+        { status: 403 }
       )
     }
 

@@ -1,27 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/api-auth'
+import { rateLimit, getRateLimitResponse, getRateLimitHeaders, RATE_LIMITS } from '@/lib/rate-limit'
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
-
-// Rate limiting helper
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
-
-function checkRateLimit(ip: string, maxRequests: number = 20, windowMs: number = 60000) {
-  const now = Date.now()
-  const key = ip
-  let entry = rateLimitStore.get(key)
-
-  if (!entry || entry.resetTime < now) {
-    entry = { count: 0, resetTime: now + windowMs }
-    rateLimitStore.set(key, entry)
-  }
-
-  entry.count++
-  return {
-    success: entry.count <= maxRequests,
-    remaining: Math.max(0, maxRequests - entry.count),
-    resetTime: entry.resetTime
-  }
-}
 
 // Claude API call helper
 async function callClaude(messages: any[], maxTokens: number = 4000) {
@@ -52,22 +33,20 @@ async function callClaude(messages: any[], maxTokens: number = 4000) {
   return data.content[0].text
 }
 
+// Sanitize user input to prevent prompt injection
+function sanitizeInput(input: string): string {
+  return input
+    .replace(/[<>]/g, '') // Remove potential HTML tags
+    .replace(/\n{3,}/g, '\n\n') // Limit consecutive newlines
+    .trim()
+}
+
 // Main POST handler
 export async function POST(request: NextRequest) {
   try {
-    // Get client IP
-    const forwardedFor = request.headers.get('x-forwarded-for')
-    const clientIP = forwardedFor?.split(',')[0]?.trim() || '127.0.0.1'
-
-    // Check rate limit
-    const rateLimit = checkRateLimit(clientIP, 20, 60000)
-
-    if (!rateLimit.success) {
-      return NextResponse.json(
-        { success: false, error: 'Rate limit exceeded. Please wait.' },
-        { status: 429 }
-      )
-    }
+    // Require authentication
+    const authUser = await requireAuth(request)
+    if (authUser instanceof NextResponse) return authUser
 
     // Check API key
     if (!ANTHROPIC_API_KEY) {
@@ -77,39 +56,103 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Rate limiting using user ID (more accurate than IP for logged-in users)
+    const identifier = authUser.id || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const rateLimitResult = rateLimit(identifier, RATE_LIMITS.ai)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     const body = await request.json()
     const { action, params } = body
 
+    // Validate action
+    const validActions = [
+      'brandDNA',
+      'analyzeBrand',
+      'generateIdeas',
+      'generateProposal',
+      'searchReference',
+      'improveText',
+      'trendAnalysis',
+      'audienceInsights',
+      'calculateROI'
+    ]
+
+    if (!action || !validActions.includes(action)) {
+      return NextResponse.json(
+        { success: false, error: `Invalid action. Valid actions: ${validActions.join(', ')}` },
+        { status: 400 }
+      )
+    }
+
     let result: string
 
-    // Route to appropriate AI function
+    // Route to appropriate AI function with sanitized params
     switch (action) {
       case 'brandDNA':
-        result = await handleBrandDNA(params)
+        result = await handleBrandDNA({
+          brandName: sanitizeInput(params.brandName || ''),
+          industry: sanitizeInput(params.industry || ''),
+          competitorBrands: (params.competitorBrands || []).map((b: string) => sanitizeInput(b))
+        })
         break
       case 'analyzeBrand':
-        result = await handleAnalyzeBrand(params)
+        result = await handleAnalyzeBrand({
+          brandName: sanitizeInput(params.brandName || ''),
+          industry: sanitizeInput(params.industry || '')
+        })
         break
       case 'generateIdeas':
-        result = await handleGenerateIdeas(params)
+        result = await handleGenerateIdeas({
+          brandName: sanitizeInput(params.brandName || ''),
+          industry: sanitizeInput(params.industry || ''),
+          programType: sanitizeInput(params.programType || ''),
+          targetAudience: params.targetAudience ? sanitizeInput(params.targetAudience) : undefined,
+          budget: params.budget ? sanitizeInput(params.budget) : undefined
+        })
         break
       case 'generateProposal':
-        result = await handleGenerateProposal(params)
+        result = await handleGenerateProposal({
+          brandName: sanitizeInput(params.brandName || ''),
+          programName: sanitizeInput(params.programName || ''),
+          objective: sanitizeInput(params.objective || ''),
+          keyMessages: (params.keyMessages || []).map((m: string) => sanitizeInput(m)),
+          budget: params.budget ? sanitizeInput(params.budget) : undefined
+        })
         break
       case 'searchReference':
-        result = await handleSearchReference(params)
+        result = await handleSearchReference({
+          topic: sanitizeInput(params.topic || ''),
+          industry: params.industry ? sanitizeInput(params.industry) : undefined
+        })
         break
       case 'improveText':
-        result = await handleImproveText(params)
+        result = await handleImproveText({
+          text: sanitizeInput(params.text || ''),
+          type: params.type ? sanitizeInput(params.type) : undefined
+        })
         break
       case 'trendAnalysis':
-        result = await handleTrendAnalysis(params)
+        result = await handleTrendAnalysis({
+          industry: params.industry ? sanitizeInput(params.industry) : undefined,
+          category: params.category ? sanitizeInput(params.category) : undefined
+        })
         break
       case 'audienceInsights':
-        result = await handleAudienceInsights(params)
+        result = await handleAudienceInsights({
+          industry: params.industry ? sanitizeInput(params.industry) : undefined,
+          demographic: params.demographic ? sanitizeInput(params.demographic) : undefined
+        })
         break
       case 'calculateROI':
-        result = await handleCalculateROI(params)
+        result = await handleCalculateROI({
+          budget: sanitizeInput(params.budget || ''),
+          program: sanitizeInput(params.program || ''),
+          expectedReach: params.expectedReach ? sanitizeInput(params.expectedReach) : undefined,
+          duration: params.duration ? sanitizeInput(params.duration) : undefined
+        })
         break
       default:
         return NextResponse.json(
@@ -118,14 +161,11 @@ export async function POST(request: NextRequest) {
         )
     }
 
+    const headers = getRateLimitHeaders(rateLimitResult.remaining, rateLimitResult.resetAt)
+
     return NextResponse.json(
       { success: true, data: result },
-      {
-        headers: {
-          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-          'X-RateLimit-Reset': rateLimit.resetTime.toString(),
-        }
-      }
+      { headers }
     )
   } catch (error: any) {
     console.error('AI API route error:', error)

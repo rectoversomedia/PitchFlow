@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { getToken } from "next-auth/jwt"
 
 // Protected routes that require authentication
 const protectedPaths = [
@@ -27,17 +28,12 @@ const publicPaths = [
   "/reset-password",
   "/api/auth",
   "/api/ai",
-  "/api/briefs",
-  "/api/proposals",
-  "/api/clients",
-  "/api/events",
-  "/api/sales-comments",
   "/_next",
   "/favicon.ico",
   "/picthflow logo (white).png",
 ]
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Allow public paths
@@ -59,21 +55,24 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Check if path is protected
-  const isProtectedPath = protectedPaths.some((path) =>
-    pathname.startsWith(path)
-  )
-
   // Redirect root to dashboard
   if (pathname === "/") {
     return NextResponse.redirect(new URL("/dashboard", request.url))
   }
 
-  if (isProtectedPath) {
-    // Check for demo mode cookie or localStorage flag via header
-    const isDemo = request.cookies.get('pitchflow_demo')?.value === 'true'
+  // Check if path is protected
+  const isProtectedPath = protectedPaths.some((path) =>
+    pathname.startsWith(path)
+  )
 
-    if (!isDemo) {
+  if (isProtectedPath) {
+    // Get the session token using NextAuth
+    const token = await getToken({
+      req: request,
+      secret: process.env.AUTH_SECRET,
+    })
+
+    if (!token) {
       // Redirect to login with callback URL
       const loginUrl = new URL("/login", request.url)
       loginUrl.searchParams.set("callbackUrl", pathname)

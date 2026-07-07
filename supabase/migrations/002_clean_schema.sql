@@ -1,8 +1,8 @@
 -- =====================================================
 -- PitchFlow Database Schema - Clean Install
--- Version: 2.0.0
+-- Version: 2.1.0
 -- Created: 2026-07-06
--- Run this ONLY if tables don't exist or you want fresh start
+-- Updated: 2026-07-07 - Fixed RLS policies for user isolation
 -- =====================================================
 
 -- Enable UUID extension
@@ -164,13 +164,18 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_briefs_status ON briefs(status);
 CREATE INDEX IF NOT EXISTS idx_briefs_created_at ON briefs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_briefs_brand_name ON briefs(brand_name);
+CREATE INDEX IF NOT EXISTS idx_briefs_created_by ON briefs(created_by);
 CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status);
 CREATE INDEX IF NOT EXISTS idx_proposals_brand_name ON proposals(brand_name);
 CREATE INDEX IF NOT EXISTS idx_proposals_created_at ON proposals(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_proposals_created_by ON proposals(created_by);
 CREATE INDEX IF NOT EXISTS idx_sales_comments_proposal_id ON sales_comments(proposal_id);
+CREATE INDEX IF NOT EXISTS idx_sales_comments_user_id ON sales_comments(user_id);
 CREATE INDEX IF NOT EXISTS idx_events_event_date ON events(event_date);
 CREATE INDEX IF NOT EXISTS idx_events_client_id ON events(client_id);
 CREATE INDEX IF NOT EXISTS idx_brand_explorations_brand_name ON brand_explorations(brand_name);
+CREATE INDEX IF NOT EXISTS idx_brand_explorations_created_by ON brand_explorations(created_by);
+CREATE INDEX IF NOT EXISTS idx_clients_created_by ON clients(created_by);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(session_token);
 
 -- =====================================================
@@ -232,34 +237,132 @@ ALTER TABLE brand_explorations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
 
 -- =====================================================
--- RLS POLICIES
+-- RLS POLICIES (SECURE - User Isolation)
 -- =====================================================
+
+-- USERS TABLE: Users can view all users (needed for team collaboration)
+-- But can only update their own profile
 DROP POLICY IF EXISTS "Users can view all users" ON users;
 CREATE POLICY "Users can view all users" ON users FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Users can update own profile" ON users;
-CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (true);
+CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (auth.uid() = id);
 
-DROP POLICY IF EXISTS "Authenticated users can manage clients" ON clients;
-CREATE POLICY "Authenticated users can manage clients" ON clients FOR ALL USING (true);
+DROP POLICY IF EXISTS "Users can insert own profile" ON users;
+CREATE POLICY "Users can insert own profile" ON users FOR INSERT WITH CHECK (auth.uid() = id);
 
-DROP POLICY IF EXISTS "Authenticated users can manage briefs" ON briefs;
-CREATE POLICY "Authenticated users can manage briefs" ON briefs FOR ALL USING (true);
+-- CLIENTS TABLE: Users can only see and manage their own clients
+-- SELECT: Users can view clients they created
+DROP POLICY IF EXISTS "Users can view own clients" ON clients;
+CREATE POLICY "Users can view own clients" ON clients FOR SELECT
+  USING (auth.uid() = created_by);
 
-DROP POLICY IF EXISTS "Authenticated users can manage proposals" ON proposals;
-CREATE POLICY "Authenticated users can manage proposals" ON proposals FOR ALL USING (true);
+-- INSERT: Users can only create clients for themselves
+DROP POLICY IF EXISTS "Users can insert own clients" ON clients;
+CREATE POLICY "Users can insert own clients" ON clients FOR INSERT
+  WITH CHECK (auth.uid() = created_by);
 
-DROP POLICY IF EXISTS "Authenticated users can manage comments" ON sales_comments;
-CREATE POLICY "Authenticated users can manage comments" ON sales_comments FOR ALL USING (true);
+-- UPDATE: Users can only update their own clients
+DROP POLICY IF EXISTS "Users can update own clients" ON clients;
+CREATE POLICY "Users can update own clients" ON clients FOR UPDATE
+  USING (auth.uid() = created_by);
 
-DROP POLICY IF EXISTS "Authenticated users can manage events" ON events;
-CREATE POLICY "Authenticated users can manage events" ON events FOR ALL USING (true);
+-- DELETE: Users can only delete their own clients
+DROP POLICY IF EXISTS "Users can delete own clients" ON clients;
+CREATE POLICY "Users can delete own clients" ON clients FOR DELETE
+  USING (auth.uid() = created_by);
 
-DROP POLICY IF EXISTS "Authenticated users can manage brand explorations" ON brand_explorations;
-CREATE POLICY "Authenticated users can manage brand explorations" ON brand_explorations FOR ALL USING (true);
+-- BRIEFS TABLE: Users can only see and manage their own briefs
+DROP POLICY IF EXISTS "Users can view own briefs" ON briefs;
+CREATE POLICY "Users can view own briefs" ON briefs FOR SELECT
+  USING (auth.uid() = created_by);
 
-DROP POLICY IF EXISTS "User sessions can be managed" ON user_sessions;
-CREATE POLICY "User sessions can be managed" ON user_sessions FOR ALL USING (true);
+DROP POLICY IF EXISTS "Users can insert own briefs" ON briefs;
+CREATE POLICY "Users can insert own briefs" ON briefs FOR INSERT
+  WITH CHECK (auth.uid() = created_by);
+
+DROP POLICY IF EXISTS "Users can update own briefs" ON briefs;
+CREATE POLICY "Users can update own briefs" ON briefs FOR UPDATE
+  USING (auth.uid() = created_by);
+
+DROP POLICY IF EXISTS "Users can delete own briefs" ON briefs;
+CREATE POLICY "Users can delete own briefs" ON briefs FOR DELETE
+  USING (auth.uid() = created_by);
+
+-- PROPOSALS TABLE: Users can only see and manage their own proposals
+DROP POLICY IF EXISTS "Users can view own proposals" ON proposals;
+CREATE POLICY "Users can view own proposals" ON proposals FOR SELECT
+  USING (auth.uid() = created_by);
+
+DROP POLICY IF EXISTS "Users can insert own proposals" ON proposals;
+CREATE POLICY "Users can insert own proposals" ON proposals FOR INSERT
+  WITH CHECK (auth.uid() = created_by);
+
+DROP POLICY IF EXISTS "Users can update own proposals" ON proposals;
+CREATE POLICY "Users can update own proposals" ON proposals FOR UPDATE
+  USING (auth.uid() = created_by);
+
+DROP POLICY IF EXISTS "Users can delete own proposals" ON proposals;
+CREATE POLICY "Users can delete own proposals" ON proposals FOR DELETE
+  USING (auth.uid() = created_by);
+
+-- SALES COMMENTS TABLE: Users can only see their own comments
+-- Comments are linked to proposals, so we allow viewing if user owns the proposal
+DROP POLICY IF EXISTS "Users can view own comments" ON sales_comments;
+CREATE POLICY "Users can view own comments" ON sales_comments FOR SELECT
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own comments" ON sales_comments;
+CREATE POLICY "Users can insert own comments" ON sales_comments FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can only delete their own comments
+DROP POLICY IF EXISTS "Users can delete own comments" ON sales_comments;
+CREATE POLICY "Users can delete own comments" ON sales_comments FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- EVENTS TABLE: Users can only see and manage their own events
+DROP POLICY IF EXISTS "Users can view own events" ON events;
+CREATE POLICY "Users can view own events" ON events FOR SELECT
+  USING (auth.uid() = created_by);
+
+DROP POLICY IF EXISTS "Users can insert own events" ON events;
+CREATE POLICY "Users can insert own events" ON events FOR INSERT
+  WITH CHECK (auth.uid() = created_by);
+
+DROP POLICY IF EXISTS "Users can update own events" ON events;
+CREATE POLICY "Users can update own events" ON events FOR UPDATE
+  USING (auth.uid() = created_by);
+
+DROP POLICY IF EXISTS "Users can delete own events" ON events;
+CREATE POLICY "Users can delete own events" ON events FOR DELETE
+  USING (auth.uid() = created_by);
+
+-- BRAND EXPLORATIONS TABLE: Users can only see and manage their own explorations
+DROP POLICY IF EXISTS "Users can view own brand explorations" ON brand_explorations;
+CREATE POLICY "Users can view own brand explorations" ON brand_explorations FOR SELECT
+  USING (auth.uid() = created_by);
+
+DROP POLICY IF EXISTS "Users can insert own brand explorations" ON brand_explorations;
+CREATE POLICY "Users can insert own brand explorations" ON brand_explorations FOR INSERT
+  WITH CHECK (auth.uid() = created_by);
+
+DROP POLICY IF EXISTS "Users can update own brand explorations" ON brand_explorations;
+CREATE POLICY "Users can update own brand explorations" ON brand_explorations FOR UPDATE
+  USING (auth.uid() = created_by);
+
+DROP POLICY IF EXISTS "Users can delete own brand explorations" ON brand_explorations;
+CREATE POLICY "Users can delete own brand explorations" ON brand_explorations FOR DELETE
+  USING (auth.uid() = created_by);
+
+-- USER SESSIONS TABLE: Users can only manage their own sessions
+DROP POLICY IF EXISTS "Users can view own sessions" ON user_sessions;
+CREATE POLICY "Users can view own sessions" ON user_sessions FOR SELECT
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage own sessions" ON user_sessions;
+CREATE POLICY "Users can manage own sessions" ON user_sessions FOR ALL
+  USING (auth.uid() = user_id);
 
 -- =====================================================
 -- SEED DATA
