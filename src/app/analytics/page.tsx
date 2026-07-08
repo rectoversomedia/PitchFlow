@@ -133,8 +133,8 @@ export default function AnalyticsPage() {
     )
   }
 
-  // Demo mode - show mock data with indicator
-  const displayData = userType === 'demo' ? { mock: true } : realData
+  // Display real data
+  const displayData = realData
 
   const getMaxRevenue = () => Math.max(...monthlyData.map(d => d.revenue))
   const getMaxProposals = () => Math.max(...monthlyData.map(d => d.proposals))
