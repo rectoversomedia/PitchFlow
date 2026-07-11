@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Validation failed',
-          details: validation.error.errors.map(e => ({
+          details: validation.error.errors.map((e: any) => ({
             field: e.path.join('.'),
             message: e.message,
           })),
@@ -175,7 +175,7 @@ export async function PUT(request: NextRequest) {
         {
           success: false,
           error: 'Validation failed',
-          details: validation.error.errors.map(e => ({
+          details: validation.error.errors.map((e: any) => ({
             field: e.path.join('.'),
             message: e.message,
           })),
