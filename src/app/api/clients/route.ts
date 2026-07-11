@@ -4,6 +4,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getRateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 import {
   validateBody,
+  sanitizeObject,
   uuidSchema,
 } from '@/lib/validations'
 import { z } from 'zod'
@@ -97,12 +98,12 @@ export async function POST(request: NextRequest) {
     // Validate with Zod
     const validation = validateBody(body, createClientSchema)
     if (!validation.success) {
-      const zodError = validation.error as z.ZodError
+      const errors = (validation as any).error?.errors || []
       return NextResponse.json(
         {
           success: false,
           error: 'Validation failed',
-          details: zodError.errors.map((e) => ({
+          details: errors.map((e: any) => ({
             field: e.path.join('.'),
             message: e.message,
           })),
@@ -162,12 +163,12 @@ export async function PUT(request: NextRequest) {
     // Validate with Zod
     const validation = validateBody(body, updateClientSchema)
     if (!validation.success) {
-      const zodError = validation.error as z.ZodError
+      const errors = (validation as any).error?.errors || []
       return NextResponse.json(
         {
           success: false,
           error: 'Validation failed',
-          details: zodError.errors.map((e) => ({
+          details: errors.map((e: any) => ({
             field: e.path.join('.'),
             message: e.message,
           })),
