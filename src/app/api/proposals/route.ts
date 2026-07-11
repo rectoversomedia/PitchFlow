@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-auth'
 import { createServerClient } from '@/lib/supabase/server'
+import { rateLimit, getRateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
+import {
+  validateBody,
+  sanitizeObject,
+  createProposalSchema,
+  updateProposalSchema,
+  deleteProposalSchema,
+} from '@/lib/validations'
 
 // GET - Fetch user's proposals
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -14,7 +30,7 @@ export async function GET(request: NextRequest) {
     const { data: proposals, error } = await supabase
       .from('proposals')
       .select('*')
-      .eq('created_by', authUser.id) // User isolation via RLS
+      .eq('created_by', authUser.id)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -27,7 +43,16 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: proposals || []
+      data: proposals || [],
+      rateLimit: {
+        remaining: rateLimitResult.remaining,
+        resetAt: rateLimitResult.resetAt,
+      },
+    }, {
+      headers: {
+        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+        'X-RateLimit-Reset': String(rateLimitResult.resetAt),
+      },
     })
   } catch (error) {
     console.error('Error fetching proposals:', error)
@@ -41,6 +66,14 @@ export async function GET(request: NextRequest) {
 // POST - Create new proposal
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -48,31 +81,42 @@ export async function POST(request: NextRequest) {
     const supabase = await createServerClient()
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.title || !body.brand_name || !body.pic_sales) {
+    // Validate with Zod
+    const validation = validateBody(body, createProposalSchema)
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: title, brand_name, pic_sales' },
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       )
     }
 
+    // Sanitize input
+    const sanitizedData = sanitizeObject(validation.data)
+
     const { data: newProposal, error } = await supabase
       .from('proposals')
       .insert({
-        title: body.title,
-        brand_name: body.brand_name,
-        program: body.program || body.title.split(' - ')[1] || '',
-        industry: body.industry || null,
-        sponsorship_type: body.sponsorship_type || null,
-        year: body.year || new Date().getFullYear(),
-        status: body.status || 'draft',
-        brief_id: body.brief_id || null,
-        result: body.result || null,
-        pic_sales: body.pic_sales,
-        deadline: body.deadline || null,
+        title: sanitizedData.title,
+        brand_name: sanitizedData.brand_name,
+        pic_sales: sanitizedData.pic_sales,
+        program: sanitizedData.program || sanitizedData.title.split(' - ')[1] || '',
+        industry: sanitizedData.industry || null,
+        sponsorship_type: sanitizedData.sponsorship_type || null,
+        year: sanitizedData.year || new Date().getFullYear(),
+        status: sanitizedData.status || 'draft',
+        brief_id: sanitizedData.brief_id || null,
+        result: sanitizedData.result || null,
+        deadline: sanitizedData.deadline || null,
         last_activity: new Date().toISOString(),
-        slides_count: body.slides_count || 0,
-        created_by: authUser.id, // Always use authenticated user's ID
+        slides_count: sanitizedData.slides_count || 0,
+        created_by: authUser.id,
       })
       .select()
       .single()
@@ -87,8 +131,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: newProposal
-    }, { status: 201 })
+      data: newProposal,
+    }, {
+      status: 201,
+      headers: {
+        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+        'X-RateLimit-Reset': String(rateLimitResult.resetAt),
+      },
+    })
   } catch (error) {
     console.error('Error creating proposal:', error)
     return NextResponse.json(
@@ -101,6 +151,14 @@ export async function POST(request: NextRequest) {
 // PUT - Update proposal
 export async function PUT(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -108,18 +166,29 @@ export async function PUT(request: NextRequest) {
     const supabase = await createServerClient()
     const body = await request.json()
 
-    if (!body.id) {
+    // Validate with Zod
+    const validation = validateBody(body, updateProposalSchema)
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'Proposal ID is required' },
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       )
     }
 
-    // First verify the proposal belongs to this user (extra security layer)
+    const { id, ...updateData } = validation.data
+
+    // Verify ownership
     const { data: existingProposal } = await supabase
       .from('proposals')
       .select('created_by')
-      .eq('id', body.id)
+      .eq('id', id)
       .single()
 
     if (!existingProposal) {
@@ -136,23 +205,16 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    // Sanitize input
+    const sanitizedData = sanitizeObject(updateData)
+
     const { data: updatedProposal, error } = await supabase
       .from('proposals')
       .update({
-        title: body.title,
-        brand_name: body.brand_name,
-        program: body.program,
-        industry: body.industry,
-        sponsorship_type: body.sponsorship_type,
-        year: body.year,
-        status: body.status,
-        result: body.result,
-        pic_sales: body.pic_sales,
-        deadline: body.deadline,
+        ...sanitizedData,
         last_activity: new Date().toISOString(),
-        slides_count: body.slides_count,
       })
-      .eq('id', body.id)
+      .eq('id', id)
       .select()
       .single()
 
@@ -166,7 +228,12 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: updatedProposal
+      data: updatedProposal,
+    }, {
+      headers: {
+        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+        'X-RateLimit-Reset': String(rateLimitResult.resetAt),
+      },
     })
   } catch (error) {
     console.error('Error updating proposal:', error)
@@ -180,6 +247,14 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete proposal
 export async function DELETE(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -195,7 +270,16 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // First verify the proposal belongs to this user (extra security layer)
+    // Validate UUID format
+    const validation = validateBody({ id }, deleteProposalSchema)
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid proposal ID format' },
+        { status: 400 }
+      )
+    }
+
+    // Verify ownership
     const { data: existingProposal } = await supabase
       .from('proposals')
       .select('created_by')
@@ -231,7 +315,12 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Proposal deleted successfully'
+      message: 'Proposal deleted successfully',
+    }, {
+      headers: {
+        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+        'X-RateLimit-Reset': String(rateLimitResult.resetAt),
+      },
     })
   } catch (error) {
     console.error('Error deleting proposal:', error)

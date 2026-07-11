@@ -1,0 +1,498 @@
+{
+  "$schema": "https://json-schema.org/draft/2024/schema#",
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PitchFlow API",
+    "description": "API documentation for PitchFlow - AI-assisted sponsorship proposal workspace",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Rectoverso Media",
+      "email": "support@rectoverso.id"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    },
+    {
+      "url": "https://pitchflow.vercel.app",
+      "description": "Production server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "Authentication endpoints"
+    },
+    {
+      "name": "Briefs",
+      "description": "Brief intake management"
+    },
+    {
+      "name": "Proposals",
+      "description": "Proposal management"
+    },
+    {
+      "name": "Sales",
+      "description": "Sales feedback and comments"
+    },
+    {
+      "name": "AI",
+      "description": "AI-powered features"
+    },
+    {
+      "name": "Health",
+      "description": "Health check endpoints"
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check",
+        "description": "Check if the API is running",
+        "responses": {
+          "200": {
+            "description": "API is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/briefs": {
+      "get": {
+        "tags": ["Briefs"],
+        "summary": "Get all briefs",
+        "description": "Retrieve all briefs for the authenticated user",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of briefs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Brief" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Briefs"],
+        "summary": "Create a new brief",
+        "description": "Create a new brief for the authenticated user",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["brand_name", "pic_sales", "program"],
+                "properties": {
+                  "brand_name": { "type": "string", "maxLength": 200 },
+                  "pic_sales": { "type": "string", "maxLength": 100 },
+                  "program": { "type": "string", "maxLength": 200 },
+                  "industry_category": { "type": "string", "maxLength": 100 },
+                  "pic_contact": { "type": "string", "maxLength": 100 },
+                  "sponsorship_type": { "type": "string", "maxLength": 100 },
+                  "objective": { "type": "string", "maxLength": 1000 },
+                  "target_audience": { "type": "string", "maxLength": 500 },
+                  "period": { "type": "string", "maxLength": 100 },
+                  "deadline": { "type": "string", "maxLength": 50 },
+                  "budget_range": { "type": "string", "maxLength": 100 },
+                  "budget_note": { "type": "string", "maxLength": 500 },
+                  "notes": { "type": "string", "maxLength": 2000 },
+                  "attachments": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "uri" },
+                    "maxItems": 10
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Brief created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/Brief" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/proposals": {
+      "get": {
+        "tags": ["Proposals"],
+        "summary": "Get all proposals",
+        "description": "Retrieve all proposals for the authenticated user",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of proposals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Proposal" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Proposals"],
+        "summary": "Create a new proposal",
+        "description": "Create a new proposal for the authenticated user",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "brand_name", "pic_sales"],
+                "properties": {
+                  "title": { "type": "string", "maxLength": 200 },
+                  "brand_name": { "type": "string", "maxLength": 200 },
+                  "pic_sales": { "type": "string", "maxLength": 100 },
+                  "program": { "type": "string", "maxLength": 200 },
+                  "industry": { "type": "string", "maxLength": 100 },
+                  "sponsorship_type": { "type": "string", "maxLength": 100 },
+                  "year": { "type": "integer", "minimum": 2020, "maximum": 2100 },
+                  "status": {
+                    "type": "string",
+                    "enum": ["new_brief", "drafting", "need_input", "revised", "ready"]
+                  },
+                  "result": {
+                    "type": "string",
+                    "enum": ["won", "pitched", "lost", "template"]
+                  },
+                  "brief_id": { "type": "string", "format": "uuid" },
+                  "deadline": { "type": "string", "maxLength": 50 },
+                  "slides_count": { "type": "integer", "minimum": 0 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Proposal created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/Proposal" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/ai": {
+      "post": {
+        "tags": ["AI"],
+        "summary": "AI-powered request",
+        "description": "Send a request to the AI engine for content generation or analysis",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["type", "prompt"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["brief_analysis", "brand_explorer", "proposal_content", "sales_feedback"]
+                  },
+                  "prompt": { "type": "string", "maxLength": 5000 },
+                  "context": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AI response generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "content": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/sales-comments": {
+      "get": {
+        "tags": ["Sales"],
+        "summary": "Get sales comments",
+        "description": "Retrieve comments for a proposal",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "proposal_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of comments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/SalesComment" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Sales"],
+        "summary": "Create a comment",
+        "description": "Add a new comment to a proposal",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["proposal_id", "content"],
+                "properties": {
+                  "proposal_id": { "type": "string", "format": "uuid" },
+                  "content": { "type": "string", "maxLength": 2000 },
+                  "parent_id": { "type": "string", "format": "uuid" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comment created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": { "$ref": "#/components/schemas/SalesComment" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Brief": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "brand_name": { "type": "string" },
+          "industry_category": { "type": "string" },
+          "pic_sales": { "type": "string" },
+          "pic_contact": { "type": "string" },
+          "program": { "type": "string" },
+          "sponsorship_type": { "type": "string" },
+          "objective": { "type": "string" },
+          "target_audience": { "type": "string" },
+          "period": { "type": "string" },
+          "deadline": { "type": "string" },
+          "budget_range": { "type": "string" },
+          "budget_note": { "type": "string" },
+          "notes": { "type": "string" },
+          "attachments": { "type": "array", "items": { "type": "string" } },
+          "status": {
+            "type": "string",
+            "enum": ["new", "in_review", "in_progress", "completed"]
+          },
+          "created_at": { "type": "string", "format": "date-time" },
+          "created_by": { "type": "string", "format": "uuid" }
+        }
+      },
+      "Proposal": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "brand_name": { "type": "string" },
+          "program": { "type": "string" },
+          "industry": { "type": "string" },
+          "sponsorship_type": { "type": "string" },
+          "year": { "type": "integer" },
+          "status": {
+            "type": "string",
+            "enum": ["new_brief", "drafting", "need_input", "revised", "ready"]
+          },
+          "result": {
+            "type": "string",
+            "enum": ["won", "pitched", "lost", "template"]
+          },
+          "pic_sales": { "type": "string" },
+          "deadline": { "type": "string" },
+          "last_activity": { "type": "string", "format": "date-time" },
+          "slides_count": { "type": "integer" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "created_by": { "type": "string", "format": "uuid" }
+        }
+      },
+      "SalesComment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "proposal_id": { "type": "string", "format": "uuid" },
+          "user_id": { "type": "string", "format": "uuid" },
+          "user_name": { "type": "string" },
+          "user_role": { "type": "string", "enum": ["Sales", "ACS", "Supervisor"] },
+          "content": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "replies": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/SalesComment" }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "error": { "type": "string" }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request - validation error",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": {
+              "success": false,
+              "error": "Validation failed: brand_name is required"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized - authentication required",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": {
+              "success": false,
+              "error": "Authentication required"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too many requests - rate limit exceeded",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": {
+              "success": false,
+              "error": "Too many requests. Please try again later.",
+              "retryAfter": 60
+            }
+          }
+        }
+      }
+    }
+  }
+}

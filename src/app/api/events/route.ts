@@ -1,10 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-auth'
 import { createServerClient } from '@/lib/supabase/server'
+import { rateLimit, getRateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
+import {
+  validateBody,
+  sanitizeObject,
+  uuidSchema,
+} from '@/lib/validations'
+import { z } from 'zod'
+
+// Event schemas
+const eventTypeSchema = z.enum(['deadline', 'meeting', 'milestone', 'presentation', 'other'])
+
+const createEventSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(200).trim(),
+  description: z.string().max(1000).optional(),
+  event_date: z.string().min(1, 'Event date is required'),
+  event_time: z.string().max(20).optional(),
+  event_type: eventTypeSchema.optional(),
+  proposal_id: uuidSchema.optional(),
+  brief_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
+  reminder: z.boolean().optional(),
+  reminder_days_before: z.number().int().positive().max(30).optional(),
+})
+
+const updateEventSchema = z.object({
+  id: uuidSchema,
+  title: z.string().min(1).max(200).trim().optional(),
+  description: z.string().max(1000).optional().nullable(),
+  event_date: z.string().optional(),
+  event_time: z.string().max(20).optional().nullable(),
+  event_type: eventTypeSchema.optional().nullable(),
+  proposal_id: uuidSchema.optional().nullable(),
+  brief_id: uuidSchema.optional().nullable(),
+  client_id: uuidSchema.optional().nullable(),
+  reminder: z.boolean().optional().nullable(),
+  reminder_days_before: z.number().int().positive().max(30).optional().nullable(),
+})
 
 // GET - Fetch user's events
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -14,7 +59,7 @@ export async function GET(request: NextRequest) {
     const { data: events, error } = await supabase
       .from('events')
       .select('*')
-      .eq('created_by', authUser.id) // User isolation via RLS
+      .eq('created_by', authUser.id)
       .order('event_date', { ascending: true })
 
     if (error) {
@@ -27,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: events || []
+      data: events || [],
     })
   } catch (error) {
     console.error('Error fetching events:', error)
@@ -41,6 +86,14 @@ export async function GET(request: NextRequest) {
 // POST - Create new event
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -48,27 +101,30 @@ export async function POST(request: NextRequest) {
     const supabase = await createServerClient()
     const body = await request.json()
 
-    if (!body.title || !body.event_date) {
+    // Validate with Zod
+    const validation = validateBody(body, createEventSchema)
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: title, event_date' },
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       )
     }
 
+    // Sanitize strings
+    const sanitized = sanitizeObject(validation.data)
+
     const { data: newEvent, error } = await supabase
       .from('events')
       .insert({
-        title: body.title,
-        description: body.description || null,
-        event_date: body.event_date,
-        event_time: body.event_time || null,
-        event_type: body.event_type || 'other',
-        proposal_id: body.proposal_id || null,
-        brief_id: body.brief_id || null,
-        client_id: body.client_id || null,
-        reminder: body.reminder ?? true,
-        reminder_days_before: body.reminder_days_before || 1,
-        created_by: authUser.id, // Always use authenticated user's ID
+        ...sanitized,
+        created_by: authUser.id,
       })
       .select()
       .single()
@@ -83,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: newEvent
+      data: newEvent,
     }, { status: 201 })
   } catch (error) {
     console.error('Error creating event:', error)
@@ -97,6 +153,14 @@ export async function POST(request: NextRequest) {
 // PUT - Update event
 export async function PUT(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -104,18 +168,29 @@ export async function PUT(request: NextRequest) {
     const supabase = await createServerClient()
     const body = await request.json()
 
-    if (!body.id) {
+    // Validate with Zod
+    const validation = validateBody(body, updateEventSchema)
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'Event ID is required' },
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       )
     }
 
-    // First verify the event belongs to this user (extra security layer)
+    const { id, ...updateData } = validation.data
+
+    // Verify ownership
     const { data: existingEvent } = await supabase
       .from('events')
       .select('created_by')
-      .eq('id', body.id)
+      .eq('id', id)
       .single()
 
     if (!existingEvent) {
@@ -132,21 +207,13 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    // Sanitize strings
+    const sanitized = sanitizeObject(updateData)
+
     const { data: updatedEvent, error } = await supabase
       .from('events')
-      .update({
-        title: body.title,
-        description: body.description,
-        event_date: body.event_date,
-        event_time: body.event_time,
-        event_type: body.event_type,
-        proposal_id: body.proposal_id,
-        brief_id: body.brief_id,
-        client_id: body.client_id,
-        reminder: body.reminder,
-        reminder_days_before: body.reminder_days_before,
-      })
-      .eq('id', body.id)
+      .update(sanitized)
+      .eq('id', id)
       .select()
       .single()
 
@@ -160,7 +227,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: updatedEvent
+      data: updatedEvent,
     })
   } catch (error) {
     console.error('Error updating event:', error)
@@ -174,6 +241,14 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete event
 export async function DELETE(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -189,7 +264,16 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // First verify the event belongs to this user (extra security layer)
+    // Validate UUID format
+    const validation = validateBody({ id }, uuidSchema)
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid event ID format' },
+        { status: 400 }
+      )
+    }
+
+    // Verify ownership
     const { data: existingEvent } = await supabase
       .from('events')
       .select('created_by')
@@ -225,7 +309,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Event deleted successfully'
+      message: 'Event deleted successfully',
     })
   } catch (error) {
     console.error('Error deleting event:', error)

@@ -1,10 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-auth'
 import { createServerClient } from '@/lib/supabase/server'
+import { rateLimit, getRateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
+import {
+  validateBody,
+  uuidSchema,
+} from '@/lib/validations'
+import { z } from 'zod'
+
+// Client schemas
+const createClientSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200).trim(),
+  brand_name: z.string().max(200).optional(),
+  email: z.string().email().max(200).optional().or(z.literal('')),
+  phone: z.string().max(50).optional(),
+  company: z.string().max(200).optional(),
+  industry: z.string().max(100).optional(),
+  address: z.string().max(500).optional(),
+  notes: z.string().max(2000).optional(),
+})
+
+const updateClientSchema = z.object({
+  id: uuidSchema,
+  name: z.string().min(1, 'Name is required').max(200).trim().optional(),
+  brand_name: z.string().max(200).optional().nullable(),
+  email: z.string().email().max(200).optional().nullable(),
+  phone: z.string().max(50).optional().nullable(),
+  company: z.string().max(200).optional().nullable(),
+  industry: z.string().max(100).optional().nullable(),
+  address: z.string().max(500).optional().nullable(),
+  notes: z.string().max(2000).optional().nullable(),
+})
 
 // GET - Fetch user's clients
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -14,7 +52,7 @@ export async function GET(request: NextRequest) {
     const { data: clients, error } = await supabase
       .from('clients')
       .select('*')
-      .eq('created_by', authUser.id) // User isolation via RLS
+      .eq('created_by', authUser.id)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -27,7 +65,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: clients || []
+      data: clients || [],
     })
   } catch (error) {
     console.error('Error fetching clients:', error)
@@ -41,6 +79,14 @@ export async function GET(request: NextRequest) {
 // POST - Create new client
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -48,9 +94,18 @@ export async function POST(request: NextRequest) {
     const supabase = await createServerClient()
     const body = await request.json()
 
-    if (!body.name) {
+    // Validate with Zod
+    const validation = validateBody(body, createClientSchema)
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'Missing required field: name' },
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       )
     }
@@ -58,15 +113,8 @@ export async function POST(request: NextRequest) {
     const { data: newClient, error } = await supabase
       .from('clients')
       .insert({
-        name: body.name,
-        brand_name: body.brand_name || null,
-        email: body.email || null,
-        phone: body.phone || null,
-        company: body.company || null,
-        industry: body.industry || null,
-        address: body.address || null,
-        notes: body.notes || null,
-        created_by: authUser.id, // Always use authenticated user's ID
+        ...validation.data,
+        created_by: authUser.id,
       })
       .select()
       .single()
@@ -81,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: newClient
+      data: newClient,
     }, { status: 201 })
   } catch (error) {
     console.error('Error creating client:', error)
@@ -95,6 +143,14 @@ export async function POST(request: NextRequest) {
 // PUT - Update client
 export async function PUT(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -102,18 +158,29 @@ export async function PUT(request: NextRequest) {
     const supabase = await createServerClient()
     const body = await request.json()
 
-    if (!body.id) {
+    // Validate with Zod
+    const validation = validateBody(body, updateClientSchema)
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'Client ID is required' },
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       )
     }
 
-    // First verify the client belongs to this user (extra security layer)
+    const { id, ...updateData } = validation.data
+
+    // Verify ownership
     const { data: existingClient } = await supabase
       .from('clients')
       .select('created_by')
-      .eq('id', body.id)
+      .eq('id', id)
       .single()
 
     if (!existingClient) {
@@ -132,17 +199,8 @@ export async function PUT(request: NextRequest) {
 
     const { data: updatedClient, error } = await supabase
       .from('clients')
-      .update({
-        name: body.name,
-        brand_name: body.brand_name,
-        email: body.email,
-        phone: body.phone,
-        company: body.company,
-        industry: body.industry,
-        address: body.address,
-        notes: body.notes,
-      })
-      .eq('id', body.id)
+      .update(updateData)
+      .eq('id', id)
       .select()
       .single()
 
@@ -156,7 +214,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: updatedClient
+      data: updatedClient,
     })
   } catch (error) {
     console.error('Error updating client:', error)
@@ -170,6 +228,14 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete client
 export async function DELETE(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -185,7 +251,16 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // First verify the client belongs to this user (extra security layer)
+    // Validate UUID format
+    const validation = validateBody({ id }, uuidSchema)
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid client ID format' },
+        { status: 400 }
+      )
+    }
+
+    // Verify ownership
     const { data: existingClient } = await supabase
       .from('clients')
       .select('created_by')
@@ -221,7 +296,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Client deleted successfully'
+      message: 'Client deleted successfully',
     })
   } catch (error) {
     console.error('Error deleting client:', error)

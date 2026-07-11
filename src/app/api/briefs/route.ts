@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-auth'
 import { createServerClient } from '@/lib/supabase/server'
+import { rateLimit, getRateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
+import {
+  validateBody,
+  sanitizeObject,
+  createBriefSchema,
+  updateBriefSchema,
+  deleteBriefSchema,
+} from '@/lib/validations'
 
 // GET - Fetch user's briefs
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -14,7 +30,7 @@ export async function GET(request: NextRequest) {
     const { data: briefs, error } = await supabase
       .from('briefs')
       .select('*')
-      .eq('created_by', authUser.id) // User isolation via RLS
+      .eq('created_by', authUser.id)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -27,7 +43,16 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: briefs || []
+      data: briefs || [],
+      rateLimit: {
+        remaining: rateLimitResult.remaining,
+        resetAt: rateLimitResult.resetAt,
+      },
+    }, {
+      headers: {
+        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+        'X-RateLimit-Reset': String(rateLimitResult.resetAt),
+      },
     })
   } catch (error) {
     console.error('Error fetching briefs:', error)
@@ -41,6 +66,14 @@ export async function GET(request: NextRequest) {
 // POST - Create new brief
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -48,33 +81,31 @@ export async function POST(request: NextRequest) {
     const supabase = await createServerClient()
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.brand_name || !body.pic_sales || !body.program) {
+    // Validate with Zod
+    const validation = validateBody(body, createBriefSchema)
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: brand_name, pic_sales, program' },
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       )
     }
 
+    // Sanitize input
+    const sanitizedData = sanitizeObject(validation.data)
+
     const { data: newBrief, error } = await supabase
       .from('briefs')
       .insert({
-        brand_name: body.brand_name,
-        pic_sales: body.pic_sales,
-        program: body.program,
-        industry_category: body.industry_category || null,
-        pic_contact: body.pic_contact || null,
-        sponsorship_type: body.sponsorship_type || null,
-        objective: body.objective || null,
-        target_audience: body.target_audience || null,
-        period: body.period || null,
-        deadline: body.deadline || null,
-        budget_range: body.budget_range || null,
-        budget_note: body.budget_note || null,
-        notes: body.notes || null,
-        attachments: body.attachments || [],
+        ...sanitizedData,
         status: 'new',
-        created_by: authUser.id, // Always use authenticated user's ID
+        created_by: authUser.id,
       })
       .select()
       .single()
@@ -89,8 +120,14 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: newBrief
-    }, { status: 201 })
+      data: newBrief,
+    }, {
+      status: 201,
+      headers: {
+        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+        'X-RateLimit-Reset': String(rateLimitResult.resetAt),
+      },
+    })
   } catch (error) {
     console.error('Error creating brief:', error)
     return NextResponse.json(
@@ -103,6 +140,14 @@ export async function POST(request: NextRequest) {
 // PUT - Update brief
 export async function PUT(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -110,18 +155,29 @@ export async function PUT(request: NextRequest) {
     const supabase = await createServerClient()
     const body = await request.json()
 
-    if (!body.id) {
+    // Validate with Zod
+    const validation = validateBody(body, updateBriefSchema)
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'Brief ID is required' },
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message,
+          })),
+        },
         { status: 400 }
       )
     }
 
-    // First verify the brief belongs to this user (extra security layer)
+    const { id, ...updateData } = validation.data
+
+    // Verify ownership
     const { data: existingBrief } = await supabase
       .from('briefs')
       .select('created_by')
-      .eq('id', body.id)
+      .eq('id', id)
       .single()
 
     if (!existingBrief) {
@@ -138,26 +194,13 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    // Sanitize input
+    const sanitizedData = sanitizeObject(updateData)
+
     const { data: updatedBrief, error } = await supabase
       .from('briefs')
-      .update({
-        brand_name: body.brand_name,
-        industry_category: body.industry_category,
-        pic_sales: body.pic_sales,
-        pic_contact: body.pic_contact,
-        program: body.program,
-        sponsorship_type: body.sponsorship_type,
-        objective: body.objective,
-        target_audience: body.target_audience,
-        period: body.period,
-        deadline: body.deadline,
-        budget_range: body.budget_range,
-        budget_note: body.budget_note,
-        notes: body.notes,
-        attachments: body.attachments,
-        status: body.status,
-      })
-      .eq('id', body.id)
+      .update(sanitizedData)
+      .eq('id', id)
       .select()
       .single()
 
@@ -171,7 +214,12 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: updatedBrief
+      data: updatedBrief,
+    }, {
+      headers: {
+        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+        'X-RateLimit-Reset': String(rateLimitResult.resetAt),
+      },
     })
   } catch (error) {
     console.error('Error updating brief:', error)
@@ -185,6 +233,14 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete brief
 export async function DELETE(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
@@ -200,7 +256,16 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // First verify the brief belongs to this user (extra security layer)
+    // Validate UUID format
+    const validation = validateBody({ id }, deleteBriefSchema)
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid brief ID format' },
+        { status: 400 }
+      )
+    }
+
+    // Verify ownership
     const { data: existingBrief } = await supabase
       .from('briefs')
       .select('created_by')
@@ -236,7 +301,12 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Brief deleted successfully'
+      message: 'Brief deleted successfully',
+    }, {
+      headers: {
+        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+        'X-RateLimit-Reset': String(rateLimitResult.resetAt),
+      },
     })
   } catch (error) {
     console.error('Error deleting brief:', error)

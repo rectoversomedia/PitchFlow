@@ -1,6 +1,11 @@
-# PitchFlow
+# PitchFlow 🚀
 
-AI-powered sponsorship proposal workspace for media teams.
+AI-assisted sponsorship proposal workspace for media/TV teams.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
+[![Security: Production Ready](https://img.shields.io/badge/Security-Production%20Ready-brightgreen)](https://github.com/rectoverso/pitchflow#-security-features)
 
 <div align="center">
 
@@ -12,213 +17,360 @@ AI-powered sponsorship proposal workspace for media teams.
 
 </div>
 
-## Features
+## ✨ Features
 
-- **AI-Assisted Proposal Generation** - Generate winning sponsorship proposals with AI
-- **Structured Brief Intake** - Capture client briefs with structured forms
-- **Proposal Library** - Manage and organize proposal templates
-- **Brand Idea Explorer** - Research and explore brand strategies
-- **Sales Collaboration** - Team feedback and review workflows
-- **Analytics Dashboard** - Track proposal performance and metrics
-- **Calendar Integration** - Schedule deadlines and meetings
+- **AI-Powered Brief Analysis** - Leverage AI to analyze briefs and extract key insights
+- **Proposal Builder** - Create compelling sponsorship proposals with AI assistance
+- **Brand Explorer** - Deep brand DNA analysis for better targeting
+- **Sales Pipeline** - Track proposal progress from draft to win/loss
+- **Team Collaboration** - Comment system for sales feedback
+- **Role-Based Access** - Secure access for Supervisor, ACS, and Sales roles
+- **Production Ready** - Comprehensive security, validation, and error tracking
 
-## Tech Stack
+## 🛠 Tech Stack
 
-- **Framework**: Next.js 16 (App Router)
-- **UI**: React 19, Tailwind CSS v4, Radix UI
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: NextAuth.js v5
-- **AI**: Claude API (Anthropic)
-- **Monitoring**: Sentry
-- **Testing**: Vitest, Playwright
+| Category | Technology |
+|----------|------------|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript 5 |
+| UI | Tailwind CSS 4 + Radix UI |
+| Database | Supabase (PostgreSQL) |
+| Auth | NextAuth.js v5 |
+| AI | Anthropic Claude API |
+| Validation | Zod |
+| Error Tracking | Sentry |
+| Testing | Vitest + Playwright |
 
-## Getting Started
+## 📁 Project Structure
+
+```
+pitchflow/
+├── src/
+│   ├── app/                    # Next.js App Router pages
+│   │   ├── api/                # API routes
+│   │   │   ├── briefs/         # Brief CRUD
+│   │   │   ├── proposals/      # Proposal CRUD
+│   │   │   ├── clients/        # Client CRM
+│   │   │   ├── events/         # Calendar events
+│   │   │   ├── sales-comments/ # Feedback comments
+│   │   │   ├── ai/             # AI endpoints
+│   │   │   ├── auth/           # NextAuth handlers
+│   │   │   └── csrf/           # CSRF token endpoint
+│   │   ├── dashboard/          # Main dashboard
+│   │   ├── brief-intake/       # Brief submission
+│   │   ├── proposal-builder/   # Proposal editor
+│   │   ├── proposal-library/   # Reference library
+│   │   ├── brand-idea-explorer/# Brand research
+│   │   ├── brand-dna-explorer/ # Deep brand analysis
+│   │   ├── sales-review/       # Sales feedback
+│   │   ├── analytics/          # Performance metrics
+│   │   ├── calendar/           # Event scheduling
+│   │   ├── client-crm/         # Client management
+│   │   ├── trend-radar/        # Market trends
+│   │   ├── audience-insights/   # Audience analytics
+│   │   ├── roi-calculator/     # ROI calculations
+│   │   └── campaign-studio/    # Campaign management
+│   ├── components/
+│   │   ├── layout/             # Layout components
+│   │   └── ui/                 # Reusable UI components
+│   ├── lib/
+│   │   ├── auth.ts             # Auth configuration
+│   │   ├── auth-context.tsx    # Auth context provider
+│   │   ├── api-auth.ts         # API auth helpers
+│   │   ├── validations.ts      # Zod schemas
+│   │   ├── rate-limit.ts       # Rate limiting
+│   │   ├── csrf.ts             # CSRF protection
+│   │   ├── sentry.ts           # Error tracking
+│   │   ├── env.ts              # Env validation
+│   │   ├── types.ts            # TypeScript types
+│   │   ├── mock-data.ts        # Mock data
+│   │   └── supabase/           # Supabase clients
+│   └── __tests__/              # Test files
+├── docs/
+│   └── openapi.json            # API documentation
+├── supabase/
+│   └── rls-policies.sql        # Row Level Security
+└── public/                     # Static assets
+```
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
 - Node.js 20+
-- npm, yarn, or pnpm
+- npm or yarn
 - Supabase account
 - Anthropic API key (for AI features)
+- Google OAuth credentials (for login)
 
 ### Installation
 
+1. **Clone the repository**
 ```bash
-# Clone the repository
 git clone https://github.com/rectoverso/pitchflow.git
 cd pitchflow
-
-# Install dependencies
-npm install
-
-# Copy environment variables
-cp .env.example .env.local
-
-# Edit .env.local with your credentials
 ```
 
-### Environment Variables
+2. **Install dependencies**
+```bash
+npm install
+```
 
+3. **Set up environment variables**
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` with your credentials:
 ```env
 # Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# Auth
+AUTH_SECRET=generate-with-openssl-rand-base64-32
+AUTH_TRUST_HOST=true
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 # AI
-ANTHROPIC_API_KEY=your_anthropic_api_key
+ANTHROPIC_API_KEY=your-anthropic-key
 
-# Authentication
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-AUTH_SECRET=generate_a_random_secret
-
-# App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# Monitoring (optional)
-NEXT_PUBLIC_SENTRY_DSN=your_sentry_dsn
+# Sentry (optional but recommended)
+SENTRY_DSN=https://your-dsn@sentry.io/project
 ```
 
-### Database Setup
-
-Run the migration file in your Supabase dashboard:
-
+4. **Generate AUTH_SECRET**
 ```bash
-# Location: supabase/migrations/002_clean_schema.sql
+openssl rand -base64 32
 ```
 
-### Development
+5. **Set up Supabase**
 
+Run the RLS policies in your Supabase SQL editor:
 ```bash
-# Start development server
+# In Supabase Dashboard > SQL Editor
+# Copy contents of supabase/rls-policies.sql and execute
+```
+
+Required tables in Supabase:
+- `briefs` - Brief intake records
+- `proposals` - Proposal records
+- `clients` - Client CRM data
+- `events` - Calendar events
+- `sales_comments` - Feedback comments
+- `users` - User profiles
+
+6. **Start the development server**
+```bash
 npm run dev
-
-# Run type checking
-npm run type-check
-
-# Run linter
-npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to start.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Scripts
+## 🔐 Security Features
 
-| Command | Description |
-|---------|-------------|
+### ✅ Production-Ready Security Implementation
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Row Level Security (RLS)** | ✅ | Users can only access their own data |
+| **Input Validation** | ✅ | Zod schemas for all API endpoints |
+| **Rate Limiting** | ✅ | Configurable limits per endpoint type |
+| **CSRF Protection** | ✅ | Double-submit cookie pattern |
+| **XSS Prevention** | ✅ | Input sanitization for all user data |
+| **Error Tracking** | ✅ | Sentry integration |
+| **Env Validation** | ✅ | Startup validation for required vars |
+| **Auth Middleware** | ✅ | Protected route middleware |
+| **Ownership Verification** | ✅ | Extra layer for UPDATE/DELETE |
+
+### Rate Limits
+
+| Endpoint Type | Limit | Window |
+|---------------|-------|--------|
+| AI endpoints | 20 req | 1 minute |
+| Auth endpoints | 10 req | 1 minute |
+| General API | 100 req | 1 minute |
+| File uploads | 10 req | 1 minute |
+
+### CSRF Protection
+
+All mutating requests (POST, PUT, PATCH, DELETE) require:
+1. A valid CSRF token in the `x-csrf-token` header
+2. A matching CSRF cookie
+
+Get a CSRF token:
+```bash
+curl -X GET https://your-domain.com/api/csrf
+```
+
+## 🧪 Testing
+
+```bash
+# Run unit tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run E2E tests
+npm run test:e2e
+
+# Run E2E tests in UI mode
+npm run test:e2e:ui
+```
+
+### Test Coverage Areas
+
+- **Validation Schemas** - Zod validation for all inputs
+- **Sanitization** - XSS prevention tests
+- **Rate Limiting** - Limit enforcement tests
+- **Environment Validation** - Config validation
+- **Type Inference** - TypeScript type tests
+- **Edge Cases** - Unicode, whitespace, boundary values
+- **Performance** - Validation speed tests
+
+## 📚 API Documentation
+
+API documentation is available in OpenAPI 3.1 format:
+
+- [docs/openapi.json](docs/openapi.json) - Full API specification
+
+### API Endpoints
+
+| Route | Methods | Auth | Rate Limit |
+|-------|---------|------|------------|
+| `/api/briefs` | GET, POST, PUT, DELETE | Required | General |
+| `/api/proposals` | GET, POST, PUT, DELETE | Required | General |
+| `/api/clients` | GET, POST, PUT, DELETE | Required | General |
+| `/api/events` | GET, POST, PUT, DELETE | Required | General |
+| `/api/sales-comments` | GET, POST, DELETE | Required | General |
+| `/api/ai` | POST | Required | AI (20/min) |
+| `/api/auth/[...nextauth]` | GET, POST | No | Auth |
+| `/api/csrf` | GET | No | General |
+| `/api/health` | GET | No | None |
+
+### Example API Request
+
+```bash
+# Create a brief
+curl -X POST https://your-domain.com/api/briefs \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
+  -d '{
+    "brand_name": "Brand Indonesia",
+    "pic_sales": "John Doe",
+    "program": "Morning Show"
+  }'
+```
+
+### API Response Format
+
+```json
+{
+  "success": true,
+  "data": { ... },
+  "rateLimit": {
+    "remaining": 99,
+    "resetAt": 1234567890
+  }
+}
+```
+
+### Error Response Format
+
+```json
+{
+  "success": false,
+  "error": "Validation failed",
+  "details": [
+    { "field": "brand_name", "message": "Brand name is required" }
+  ]
+}
+```
+
+## 🔌 Available Scripts
+
+| Script | Description |
+|--------|-------------|
 | `npm run dev` | Start development server |
 | `npm run build` | Build for production |
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint |
 | `npm run type-check` | Run TypeScript check |
 | `npm test` | Run unit tests |
-| `npm run test:watch` | Run tests in watch mode |
 | `npm run test:coverage` | Run tests with coverage |
 | `npm run test:e2e` | Run E2E tests |
-| `npm run test:e2e:ui` | Run E2E tests with UI |
+| `npm run test:e2e:ui` | Run E2E with visual UI |
 
-## Project Structure
-
-```
-pitchflow/
-├── src/
-│   ├── app/                    # Next.js App Router
-│   │   ├── api/               # API routes
-│   │   ├── dashboard/        # Dashboard pages
-│   │   ├── brief-intake/     # Brief intake
-│   │   └── ...               # Other pages
-│   ├── components/
-│   │   ├── ui/              # Base UI components
-│   │   └── layout/          # Layout components
-│   ├── lib/
-│   │   ├── validations/     # Zod schemas
-│   │   ├── supabase/       # Supabase clients
-│   │   ├── hooks/          # Custom React hooks
-│   │   └── utils.ts        # Utilities
-│   └── test/                # Test setup
-├── supabase/
-│   └── migrations/          # Database migrations
-├── e2e/                      # E2E tests
-└── public/                   # Static assets
-```
-
-## API Routes
-
-| Route | Methods | Description |
-|-------|---------|-------------|
-| `/api/briefs` | GET, POST, PUT, DELETE | Brief management |
-| `/api/proposals` | GET, POST, PUT, DELETE | Proposal management |
-| `/api/clients` | GET, POST, PUT, DELETE | Client management |
-| `/api/events` | GET, POST, PUT, DELETE | Calendar events |
-| `/api/sales-comments` | GET, POST, DELETE | Sales feedback |
-| `/api/ai` | POST | AI-powered features |
-| `/api/auth` | GET, POST, DELETE | Authentication |
-
-## Security
-
-- Row Level Security (RLS) on all database tables
-- Session-based authentication
-- Input validation with Zod
-- Rate limiting on API endpoints
-- Security headers (CSP, HSTS, etc.)
-- Prompt injection prevention in AI endpoints
-
-## Testing
-
-```bash
-# Unit tests
-npm test
-
-# E2E tests
-npm run test:e2e
-
-# Coverage report
-npm run test:coverage
-```
-
-## Deployment
+## 🚢 Deployment
 
 ### Vercel (Recommended)
 
-1. Connect your GitHub repository to Vercel
-2. Add environment variables in Vercel dashboard
-3. Deploy
+1. Push to GitHub
+2. Import project in Vercel
+3. Add environment variables in Vercel Dashboard:
+   - `AUTH_SECRET`
+   - `ANTHROPIC_API_KEY`
+   - `GOOGLE_CLIENT_SECRET`
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+   - `SENTRY_DSN` (optional)
+4. Deploy
 
-The app will automatically:
-- Run the build command
-- Enable preview deployments for PRs
-- Configure edge caching
+### Other Platforms
 
-### Manual Deployment
-
+Build the app:
 ```bash
-# Build
 npm run build
+```
 
-# Start
+Start production server:
+```bash
 npm start
 ```
 
-## Contributing
+## 🔧 Troubleshooting
+
+### "AUTH_SECRET is not set"
+Generate a new secret:
+```bash
+openssl rand -base64 32
+```
+
+### "Supabase connection failed"
+Verify your Supabase URL and anon key are correct in `.env.local`.
+
+### "AI features not working"
+Make sure `ANTHROPIC_API_KEY` is set in your environment variables.
+
+### "CSRF validation failed"
+Refresh the page to get a new CSRF token. Ensure cookies are enabled.
+
+### Rate limit exceeded
+Wait for the rate limit window to reset (shown in `X-RateLimit-Reset` header).
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Run tests (`npm test`)
+5. Submit a pull request
 
-## License
+## 📞 Support
 
-MIT License - see LICENSE file for details.
+- Email: support@rectoverso.id
+- GitHub Issues: [Create an issue](https://github.com/rectoverso/pitchflow/issues)
 
-## Authors
+---
 
-- **Rectoverso Media** - [https://rectoverso.com](https://rectoverso.com)
-
-## Acknowledgments
-
-- [Next.js](https://nextjs.org/)
-- [Supabase](https://supabase.com/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Radix UI](https://www.radix-ui.com/)
-- [Anthropic](https://anthropic.com/)
+Built with ❤️ by [Rectoverso Media](https://rectoverso.id)
