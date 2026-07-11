@@ -252,7 +252,7 @@ export const aiRequestSchema = z.object({
 export function validateBody<T>(
   body: unknown,
   schema: z.ZodSchema<T>
-): { success: true; data: T } | { success: false; error: z.ZodError } {
+): { success: true; data: T } | { success: false; error: unknown } {
   const result = schema.safeParse(body)
 
   if (!result.success) {
