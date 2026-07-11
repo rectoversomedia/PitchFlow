@@ -97,11 +97,12 @@ export async function POST(request: NextRequest) {
     // Validate with Zod
     const validation = validateBody(body, createClientSchema)
     if (!validation.success) {
+      const zodError = validation.error as z.ZodError
       return NextResponse.json(
         {
           success: false,
           error: 'Validation failed',
-          details: validation.error.errors.map((e: any) => ({
+          details: zodError.errors.map((e) => ({
             field: e.path.join('.'),
             message: e.message,
           })),
@@ -161,11 +162,12 @@ export async function PUT(request: NextRequest) {
     // Validate with Zod
     const validation = validateBody(body, updateClientSchema)
     if (!validation.success) {
+      const zodError = validation.error as z.ZodError
       return NextResponse.json(
         {
           success: false,
           error: 'Validation failed',
-          details: validation.error.errors.map((e: any) => ({
+          details: zodError.errors.map((e) => ({
             field: e.path.join('.'),
             message: e.message,
           })),
