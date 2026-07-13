@@ -21,9 +21,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession()
   const [userType, setUserType] = useState<UserType>('new')
   const [storedUser, setStoredUser] = useState<User | null>(null)
+  const [mounted, setMounted] = useState(false)
 
   // Load user from localStorage on mount
   useEffect(() => {
+    setMounted(true)
     const { user, userType: type } = getUserFromStorage()
     if (user && type) {
       setStoredUser(user)
@@ -58,18 +60,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     avatar: session.user.image || undefined,
   } : storedUser
 
-  // Update userType based on authentication
+  // Only access session after mount (client-side only)
   useEffect(() => {
     if (session?.user) {
       setUserType('existing')
+      setStoredUser({
+        id: (session.user as any).id || '',
+        name: session.user.name || '',
+        email: session.user.email || '',
+        role: (session.user as any).role || 'Sales',
+        avatar: session.user.image,
+      })
     }
   }, [session])
 
   const value: AuthContextValue = {
-    user,
+    user: mounted ? (session?.user ? {
+      id: (session.user as any).id || '',
+      name: session.user.name || '',
+      email: session.user.email || '',
+      role: (session.user as any).role || 'Sales',
+      avatar: session.user.image || undefined,
+    } : storedUser) : null,
     userType: session?.user ? 'existing' : userType,
-    isLoading: status === 'loading',
-    isAuthenticated: status === 'authenticated' || storedUser !== null,
+    isLoading: !mounted || status === 'loading',
+    isAuthenticated: (session?.user !== null || storedUser !== null) && mounted,
     logout,
     loginWithGoogle,
     loginAsDemo,
