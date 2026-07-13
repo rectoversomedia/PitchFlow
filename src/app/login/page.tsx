@@ -8,37 +8,22 @@ import { useAuth } from "@/lib/auth-context"
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { loginAsDemo, isLoading: authLoading } = useAuth()
-  const [isLoggingIn, setIsLoggingIn] = useState(false)
+  const { loginAsDemo } = useAuth()
   const [error, setError] = useState("")
 
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
 
-  const handleDemoLogin = async () => {
-    setIsLoggingIn(true)
-    setError("")
+  const handleDemoLogin = () => {
     try {
-      // Use demo mode
       loginAsDemo()
-      router.push(callbackUrl)
+      // loginAsDemo already handles redirect
     } catch (err: any) {
       setError(err.message || "Demo login gagal.")
-    } finally {
-      setIsLoggingIn(false)
     }
   }
 
   const handleGoogleLogin = () => {
-    // For now, redirect to Google OAuth
     window.location.href = '/api/auth/signin/google'
-  }
-
-  if (authLoading) {
-    return (
-      <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center' }}>
-        <p>Loading...</p>
-      </div>
-    )
   }
 
   return (
@@ -297,7 +282,6 @@ function LoginForm() {
           {/* Google Login */}
           <button
             type="button"
-            disabled={isLoggingIn}
             onClick={handleGoogleLogin}
             style={{
               width: "100%",
@@ -307,7 +291,7 @@ function LoginForm() {
               fontWeight: 500,
               borderRadius: 10,
               border: "1px solid #e2e8f0",
-              cursor: isLoggingIn ? "not-allowed" : "pointer",
+              cursor: "pointer",
               fontSize: 15,
               marginBottom: 16,
               display: "flex",
@@ -341,16 +325,11 @@ function LoginForm() {
           <button
             type="button"
             onClick={handleDemoLogin}
-            disabled={isLoggingIn}
             style={{
               width: "100%",
               height: 48,
               background: "#16a34a",
               color: "white",
-              fontWeight: 600,
-              borderRadius: 10,
-              border: "none",
-              cursor: isLoggingIn ? "not-allowed" : "pointer",
               fontSize: 15,
               display: "flex",
               alignItems: "center",

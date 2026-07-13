@@ -1,90 +1,84 @@
-import { createContext, useContext, ReactNode, useState, useEffect } from "react"
-import { useSession, signIn, signOut } from "next-auth/react"
-import { User } from "@/lib/types"
-import { getUserFromStorage, saveUserToStorage, clearUserFromStorage, demoUsers } from "@/lib/auth-utils"
+"use client"
 
+import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from "react"
+import { User } from "@/lib/types"
+
+// User type constants
 export type UserType = 'new' | 'existing' | 'demo'
+
+// Demo users data
+const demoUsers: Record<UserType, User | null> = {
+  demo: {
+    id: "demo-1",
+    name: "Demo User",
+    email: "demo@pitchflow.app",
+    role: "Supervisor",
+  },
+  new: null,
+  existing: null,
+}
 
 interface AuthContextValue {
   user: User | null
   userType: UserType
   isLoading: boolean
   isAuthenticated: boolean
-  logout: () => Promise<void>
-  loginWithGoogle: () => Promise<void>
+  logout: () => void
+  loginWithGoogle: () => void
   loginAsDemo: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { data: session, status } = useSession()
-  const [userType, setUserType] = useState<UserType>('new')
-  const [storedUser, setStoredUser] = useState<User | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
+  const [userType, setUserType] = useState<UserType>('new')
 
-  // Load user from localStorage on mount
+  // Load from localStorage on mount
   useEffect(() => {
     setMounted(true)
-    const { user, userType: type } = getUserFromStorage()
-    if (user && type) {
-      setStoredUser(user)
-      setUserType(type)
+
+    // Check localStorage for saved user
+    const savedUser = localStorage.getItem('pitchflow_user')
+    const savedType = localStorage.getItem('pitchflow_user_type') as UserType | null
+
+    if (savedUser && savedType) {
+      try {
+        setUser(JSON.parse(savedUser))
+        setUserType(savedType)
+      } catch (e) {
+        console.error('Error parsing saved user:', e)
+      }
     }
   }, [])
 
-  const loginWithGoogle = async () => {
-    await signIn("google", { callbackUrl: "/dashboard" })
-  }
-
-  const loginAsDemo = () => {
-    const demoUser = demoUsers.demo as User
-    setStoredUser(demoUser)
+  const loginAsDemo = useCallback(() => {
+    const demoUser = demoUsers.demo!
+    setUser(demoUser)
     setUserType('demo')
-    saveUserToStorage(demoUser, 'demo')
-  }
+    localStorage.setItem('pitchflow_user', JSON.stringify(demoUser))
+    localStorage.setItem('pitchflow_user_type', 'demo')
+    window.location.href = '/dashboard'
+  }, [])
 
-  const logout = async () => {
-    clearUserFromStorage()
-    setStoredUser(null)
+  const loginWithGoogle = useCallback(() => {
+    window.location.href = '/api/auth/signin/google'
+  }, [])
+
+  const logout = useCallback(() => {
+    setUser(null)
     setUserType('new')
-    await signOut({ callbackUrl: "/login" })
-  }
-
-  // Use session user if authenticated, otherwise use stored user
-  const user: User | null = session?.user ? {
-    id: (session.user as any).id || '',
-    name: session.user.name || '',
-    email: session.user.email || '',
-    role: (session.user as any).role || 'Sales',
-    avatar: session.user.image || undefined,
-  } : storedUser
-
-  // Only access session after mount (client-side only)
-  useEffect(() => {
-    if (session?.user) {
-      setUserType('existing')
-      setStoredUser({
-        id: (session.user as any).id || '',
-        name: session.user.name || '',
-        email: session.user.email || '',
-        role: (session.user as any).role || 'Sales',
-        avatar: session.user.image,
-      })
-    }
-  }, [session])
+    localStorage.removeItem('pitchflow_user')
+    localStorage.removeItem('pitchflow_user_type')
+    window.location.href = '/login'
+  }, [])
 
   const value: AuthContextValue = {
-    user: mounted ? (session?.user ? {
-      id: (session.user as any).id || '',
-      name: session.user.name || '',
-      email: session.user.email || '',
-      role: (session.user as any).role || 'Sales',
-      avatar: session.user.image || undefined,
-    } : storedUser) : null,
-    userType: session?.user ? 'existing' : userType,
-    isLoading: !mounted || status === 'loading',
-    isAuthenticated: (session?.user !== null || storedUser !== null) && mounted,
+    user: mounted ? user : null,
+    userType: mounted ? userType : 'new',
+    isLoading: !mounted,
+    isAuthenticated: mounted && user !== null,
     logout,
     loginWithGoogle,
     loginAsDemo,
