@@ -1,13 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server"
-
-// Note: Authentication is handled client-side via localStorage
-// API routes have their own auth checks
+import { auth } from "@/lib/auth"
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Public paths that don't need any processing
+  // Public paths that don't need authentication
   const publicPaths = [
+    "/",
     "/login",
     "/signup",
     "/forgot-password",
@@ -18,12 +17,12 @@ export async function middleware(request: NextRequest) {
     "/api/health",
     "/_next",
     "/favicon.ico",
+    "/public",
   ]
 
   // Allow public paths
   if (publicPaths.some((path) => pathname.startsWith(path))) {
     const response = NextResponse.next()
-    // Add security headers
     addSecurityHeaders(response)
     return response
   }
@@ -37,7 +36,39 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Allow all other paths (auth handled client-side)
+  // Check authentication for protected routes
+  const session = await auth()
+
+  // Routes that require authentication
+  const protectedRoutes = [
+    "/dashboard",
+    "/brief-intake",
+    "/proposal-builder",
+    "/proposal-library",
+    "/client-crm",
+    "/calendar",
+    "/sales-review",
+    "/brand-idea-explorer",
+    "/brand-dna-explorer",
+    "/campaign-studio",
+    "/trend-radar",
+    "/audience-insights",
+    "/roi-calculator",
+    "/analytics",
+    "/presentation",
+  ]
+
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    pathname.startsWith(route)
+  )
+
+  if (isProtectedRoute && !session?.user) {
+    // Redirect to login with return URL
+    const loginUrl = new URL("/login", request.url)
+    loginUrl.searchParams.set("callbackUrl", pathname)
+    return NextResponse.redirect(loginUrl)
+  }
+
   const response = NextResponse.next()
   addSecurityHeaders(response)
   return response

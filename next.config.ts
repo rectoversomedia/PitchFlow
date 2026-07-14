@@ -34,12 +34,13 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://accounts.google.com https://www.googletagmanager.com",
-      "frame-src 'self' https://accounts.google.com",
+      "frame-src 'self' https://accounts.google.com https://pitchflow.rectoversomedia.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      "connect-src 'self' https://*.supabase.co https://*.googleapis.com https://accounts.google.com",
+      "connect-src 'self' https://*.supabase.co https://*.googleapis.com https://accounts.google.com https://oauth2.googleapis.com",
       "worker-src 'self' blob:",
+      "form-action 'self' https://accounts.google.com",
     ].join('; ')
   }
 ]

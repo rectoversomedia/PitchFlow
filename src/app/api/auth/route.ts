@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit, getRateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
 
 // GET - Get current session
 export async function GET(request: NextRequest) {
@@ -53,9 +54,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Sign in
+// POST - Sign in with rate limiting and enhanced security
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting for auth endpoints
+    const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.auth)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     const supabase = await createClient()
     const body = await request.json()
     const { email, password } = body
@@ -63,29 +72,54 @@ export async function POST(request: NextRequest) {
     if (!email || !password) {
       return NextResponse.json(
         { success: false, error: 'Email and password are required' },
-        { status: 400 }
+        {
+          status: 400,
+          headers: {
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+            'X-RateLimit-Reset': String(rateLimitResult.resetAt),
+          }
+        }
       )
     }
 
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim()
+
+    // Sign in with Supabase Auth (handles password hashing internally)
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+      email: normalizedEmail,
+      password: password,
     })
 
     if (error) {
+      console.error('Sign in error:', error.message)
       return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 }
+        { success: false, error: 'Email atau password salah' },
+        {
+          status: 401,
+          headers: {
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+            'X-RateLimit-Reset': String(rateLimitResult.resetAt),
+          }
+        }
       )
     }
 
     if (data.user) {
-      // Fetch user profile
+      // Fetch user profile from users table
       const { data: profile } = await supabase
         .from('users')
         .select('*')
-        .eq('email', email)
+        .eq('email', normalizedEmail)
         .single()
+
+      // Update last login timestamp
+      if (profile) {
+        await supabase
+          .from('users')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', profile.id)
+      }
 
       return NextResponse.json({
         success: true,
@@ -95,22 +129,39 @@ export async function POST(request: NextRequest) {
           email: profile.email,
           role: profile.role,
           avatar: profile.avatar_url,
-        } : null,
+        } : {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.user_metadata?.name || null,
+          role: data.user.user_metadata?.role || 'ACS',
+          avatar: data.user.user_metadata?.avatar_url || null,
+        },
         session: {
           expires_at: data.session?.expires_at,
-          email: data.user.email,
+          email: normalizedEmail,
         }
+      }, {
+        headers: {
+          'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          'X-RateLimit-Reset': String(rateLimitResult.resetAt),
+        },
       })
     }
 
     return NextResponse.json(
       { success: false, error: 'Sign in failed' },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          'X-RateLimit-Reset': String(rateLimitResult.resetAt),
+        }
+      }
     )
   } catch (error) {
     console.error('Sign in error:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to sign in' },
+      { success: false, error: 'Gagal masuk. Silakan coba lagi.' },
       { status: 500 }
     )
   }

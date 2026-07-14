@@ -1,103 +1,123 @@
-# PitchFlow by Rectoverso
+# PitchFlow - AI-assisted sponsorship proposal workspace for media/TV teams
 
-AI-assisted sponsorship proposal workspace for media/TV teams.
+## Project Overview
+
+PitchFlow is a Next.js application for managing sponsorship proposals with AI assistance. Built with security and production-readiness as core requirements.
 
 ## Tech Stack
 
-- **Next.js** (App Router)
-- **TypeScript**
-- **Tailwind CSS**
-- **Radix UI** (headless components)
-- **Lucide React** (icons)
-- **Mock data** (no real backend yet)
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript 5
+- **UI**: Tailwind CSS 4 + Radix UI
+- **Database**: Supabase (PostgreSQL)
+- **Auth**: NextAuth.js v5 (JWT)
+- **AI**: Anthropic Claude API
+- **Validation**: Zod
+- **Testing**: Vitest + Playwright
+- **Deployment**: Vercel
 
 ## Project Structure
 
 ```
 src/
-├── app/
-│   ├── login/              # Split-screen login page
-│   ├── dashboard/          # Main dashboard with KPI + pipeline
-│   ├── brief-intake/        # Brief intake form + table
-│   ├── proposal-builder/    # AI-powered proposal builder
-│   ├── proposal-library/    # Proposal reference library
-│   ├── brand-idea-explorer/ # Brand research + creative ideas
-│   ├── sales-review/        # Sales feedback management
-│   ├── layout.tsx           # Root layout with Inter font
-│   └── globals.css          # Global styles + custom theme
+├── app/                    # Next.js App Router pages
+│   ├── api/                # API routes
+│   │   ├── briefs/         # Brief CRUD
+│   │   ├── proposals/      # Proposal CRUD
+│   │   ├── clients/        # Client CRM
+│   │   ├── events/         # Calendar events
+│   │   ├── sales-comments/ # Feedback comments
+│   │   ├── ai/             # AI endpoints
+│   │   ├── auth/           # NextAuth handlers
+│   │   ├── csrf/           # CSRF protection
+│   │   └── upload/         # File uploads
+│   └── [pages]/            # Page components
 ├── components/
-│   ├── layout/
-│   │   ├── Sidebar.tsx      # Dark navy sidebar with navigation
-│   │   ├── Header.tsx       # Top bar with search + user menu
-│   │   └── MainLayout.tsx   # Layout wrapper
-│   └── ui/                  # Reusable UI components
-│       ├── button.tsx
-│       ├── input.tsx
-│       ├── textarea.tsx
-│       ├── card.tsx
-│       ├── badge.tsx
-│       ├── select.tsx
-│       ├── tabs.tsx
-│       ├── dialog.tsx
-│       ├── avatar.tsx
-│       ├── label.tsx
-│       ├── progress.tsx
-│       ├── table.tsx
-│       └── dropdown-menu.tsx
-└── lib/
-    ├── utils.ts             # cn() utility
-    ├── types.ts             # TypeScript interfaces
-    └── mock-data.ts         # Mock data + constants
+│   ├── ui/                 # Reusable UI components
+│   └── layout/              # Layout components
+├── lib/
+│   ├── auth.ts             # NextAuth configuration
+│   ├── password.ts         # Password hashing (bcrypt)
+│   ├── rate-limit.ts        # Rate limiting (Redis/in-memory)
+│   ├── ai-service.ts        # Unified AI service (Claude)
+│   ├── csrf.ts             # CSRF protection
+│   ├── env.ts              # Environment validation
+│   ├── validations/         # Zod schemas
+│   ├── supabase/           # Supabase clients
+│   └── utils.ts            # Utilities
+├── hooks/                   # React hooks
+├── types/                   # TypeScript types
+└── __tests__/              # Unit tests
 ```
 
-## Pages / Routes
+## Database Schema
 
-| Route | Description |
-|-------|-------------|
-| `/login` | Split-screen login with dark branding left side |
-| `/dashboard` | KPI cards + proposal pipeline kanban |
-| `/brief-intake` | Brief form (left) + brief list table (right) |
-| `/proposal-builder` | AI tools + proposal structure + comments |
-| `/proposal-library` | Searchable proposal reference library |
-| `/brand-idea-explorer` | Brand analysis + program recommendations |
-| `/sales-review` | Sales feedback management + comments |
+### Tables
+- `users` - User profiles and roles
+- `briefs` - Brief intake records
+- `proposals` - Sponsorship proposals
+- `clients` - Client CRM data
+- `events` - Calendar events
+- `sales_comments` - Feedback comments
 
-## Design System
+### Row Level Security (RLS)
+All tables have RLS enabled. Users can only access their own data.
 
-### Colors
-- **Primary Navy**: `#061A3A`
-- **Accent Red**: `#E50914`
-- **Purple (AI)**: `#7C3AED`
-- **Blue**: `#2563EB`
-- **Background**: `#F7F9FC`
+## Security Features
 
-### Typography
-- Font: **Inter**
-- Sidebar: dark navy background
-- Main: white/light gray background
+| Feature | Implementation |
+|---------|--------------|
+| RLS | Supabase Row Level Security |
+| Auth | NextAuth.js v5 JWT |
+| Rate Limiting | Redis (Upstash) or in-memory |
+| CSRF | Double-submit cookie |
+| Input Validation | Zod schemas |
+| XSS Prevention | Input sanitization |
+| Password Hashing | bcrypt (12 rounds) |
 
-## Development
+## AI Features
+
+Uses Claude API for:
+- Brand DNA Analysis
+- Creative Ideas Generation
+- Proposal Content Generation
+- Reference Search
+- Text Improvement
+- Trend Analysis
+- Audience Insights
+- ROI Calculation
+
+## Environment Variables
+
+Required:
+- `AUTH_SECRET` - NextAuth secret (min 32 chars)
+- `NEXT_PUBLIC_SUPABASE_URL` - Supabase URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anon key
+- `ANTHROPIC_API_KEY` - Claude API key
+
+Optional:
+- `OPENAI_API_KEY` - For image generation
+- `UPSTASH_REDIS_REST_URL` - Redis for distributed rate limiting
+- `UPSTASH_REDIS_REST_TOKEN` - Redis token
+- `SENTRY_DSN` - Error tracking
+
+## Scripts
 
 ```bash
-npm run dev    # Start dev server (runs on port 3000)
-npm run build  # Production build
+npm run dev          # Development server
+npm run build        # Production build
+npm run test         # Run tests
+npm run test:e2e    # E2E tests
+npm run lint         # ESLint
+npm run type-check   # TypeScript check
 ```
 
-## Next Steps (Future)
+## Deployment
 
-- [ ] Add real authentication (Supabase/Firebase)
-- [ ] Connect to database
-- [ ] Implement AI endpoints
-- [ ] Add file upload functionality
-- [ ] Export proposal to PDF
+Deployed on Vercel. See `.github/workflows/` for CI/CD configuration.
 
-## Reference Design
+## Supabase Project
 
-Design references are in `/Users/fajarpahlawan/Documents/PitchFlow/referensi/`:
-- `Login.png` - Login page design
-- `homepage.png` - Dashboard design
-- `brief intake.png` - Brief intake form
-- `proposal builder.png` - Proposal builder design
-- `proposal library.png` - Library page design
-- `brand & idea.png` - Brand explorer design
-- `sales review.png` - Sales review design
+- **Project ID**: bfzeixmnudtshvscigwm
+- **Region**: ap-northeast-2
+- **Status**: ACTIVE_HEALTHY
