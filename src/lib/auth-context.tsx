@@ -5,81 +5,49 @@ import { useSession, signOut as nextAuthSignOut, signIn as nextAuthSignIn } from
 import { User } from "@/lib/types"
 
 // User type constants
-export type UserType = 'new' | 'existing' | 'demo'
-
-// Demo user for testing
-const demoUser: User = {
-  id: "demo-1",
-  name: "Demo User",
-  email: "demo@pitchflow.app",
-  role: "Supervisor",
-}
+export type UserType = 'new' | 'existing'
 
 interface AuthContextValue {
   user: User | null
   userType: UserType
   isLoading: boolean
   isAuthenticated: boolean
-  isDemo: boolean
   logout: () => void
-  loginWithGoogle: () => void
-  loginWithEmail: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
-  loginAsDemo: () => void
+  loginWithCredentials: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   refreshUser: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Use NextAuth session as the source of truth
   const { data: session, status, update } = useSession()
   const [userType, setUserType] = useState<UserType>('new')
-  const [isDemo, setIsDemo] = useState(false)
   const [mounted, setMounted] = useState(false)
 
-  // Load demo mode from localStorage on mount
+  // Set mounted on client
   useEffect(() => {
     setMounted(true)
-    const savedType = localStorage.getItem('pitchflow_user_type') as UserType | null
-    if (savedType === 'demo') {
-      setUserType('demo')
-      setIsDemo(true)
-    }
   }, [])
 
   // Sync session with state
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
       setUserType('existing')
-      setIsDemo(false)
-      // Clear demo mode if real login
-      localStorage.removeItem('pitchflow_user_type')
-    } else if (status === 'unauthenticated' && !isDemo) {
+    } else if (status === 'unauthenticated') {
       setUserType('new')
     }
-  }, [status, session, isDemo])
+  }, [status, session])
 
   // Convert session user to User type
-  const user: User | null = isDemo ? demoUser : (session?.user ? {
+  const user: User | null = session?.user ? {
     id: session.user.id || '',
     name: session.user.name || '',
     email: session.user.email || '',
     role: (session.user as any).role || 'Sales',
     avatar: session.user.image || undefined,
-  } : null)
+  } : null
 
-  const loginAsDemo = useCallback(() => {
-    setUserType('demo')
-    setIsDemo(true)
-    localStorage.setItem('pitchflow_user_type', 'demo')
-    window.location.href = '/dashboard'
-  }, [])
-
-  const loginWithGoogle = useCallback(() => {
-    nextAuthSignIn('google', { callbackUrl: '/dashboard' })
-  }, [])
-
-  const loginWithEmail = useCallback(async (email: string, password: string) => {
+  const loginWithCredentials = useCallback(async (email: string, password: string) => {
     try {
       const result = await nextAuthSignIn('credentials', {
         email,
@@ -91,7 +59,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: 'Email atau password salah' }
       }
 
-      // Refresh the page to get the session
       window.location.href = '/dashboard'
       return { success: true }
     } catch (error) {
@@ -100,18 +67,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
-    // Clear demo mode
     setUserType('new')
-    setIsDemo(false)
-    localStorage.removeItem('pitchflow_user_type')
-
-    // Sign out from NextAuth if logged in
-    if (status === 'authenticated') {
-      await nextAuthSignOut({ callbackUrl: '/login' })
-    } else {
-      window.location.href = '/login'
-    }
-  }, [status])
+    await nextAuthSignOut({ callbackUrl: '/login' })
+  }, [])
 
   const refreshUser = useCallback(async () => {
     await update()
@@ -121,12 +79,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user: mounted ? user : null,
     userType: mounted ? userType : 'new',
     isLoading: !mounted || status === 'loading',
-    isAuthenticated: mounted && (user !== null || isDemo),
-    isDemo: mounted && isDemo,
+    isAuthenticated: mounted && user !== null,
     logout,
-    loginWithGoogle,
-    loginWithEmail,
-    loginAsDemo,
+    loginWithCredentials,
     refreshUser,
   }
 

@@ -2,18 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-auth'
 import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getRateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
-import {
-  validateBody,
-  sanitizeObject,
-  createBriefSchema,
-  updateBriefSchema,
-  deleteBriefSchema,
-} from '@/lib/validations'
+import { validateBody, sanitizeObject, createBriefSchema, updateBriefSchema, deleteBriefSchema } from '@/lib/validations'
 
 // GET - Fetch user's briefs
 export async function GET(request: NextRequest) {
   try {
-    // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
@@ -21,7 +14,6 @@ export async function GET(request: NextRequest) {
       return getRateLimitResponse(rateLimitResult.resetAt)
     }
 
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
@@ -66,7 +58,6 @@ export async function GET(request: NextRequest) {
 // POST - Create new brief
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
@@ -74,14 +65,12 @@ export async function POST(request: NextRequest) {
       return getRateLimitResponse(rateLimitResult.resetAt)
     }
 
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
     const supabase = await createServerClient()
     const body = await request.json()
 
-    // Validate with Zod
     const validation = validateBody(body, createBriefSchema)
     if (!validation.success) {
       const errors = (validation as any).error?.errors || []
@@ -98,7 +87,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Sanitize input
     const sanitizedData = sanitizeObject(validation.data)
 
     const { data: newBrief, error } = await supabase
@@ -141,7 +129,6 @@ export async function POST(request: NextRequest) {
 // PUT - Update brief
 export async function PUT(request: NextRequest) {
   try {
-    // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
@@ -149,14 +136,12 @@ export async function PUT(request: NextRequest) {
       return getRateLimitResponse(rateLimitResult.resetAt)
     }
 
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
     const supabase = await createServerClient()
     const body = await request.json()
 
-    // Validate with Zod
     const validation = validateBody(body, updateBriefSchema)
     if (!validation.success) {
       const errors = (validation as any).error?.errors || []
@@ -191,12 +176,11 @@ export async function PUT(request: NextRequest) {
 
     if (existingBrief.created_by !== authUser.id) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized - You can only update your own briefs' },
+        { success: false, error: 'Unauthorized' },
         { status: 403 }
       )
     }
 
-    // Sanitize input
     const sanitizedData = sanitizeObject(updateData)
 
     const { data: updatedBrief, error } = await supabase
@@ -235,7 +219,6 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete brief
 export async function DELETE(request: NextRequest) {
   try {
-    // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
@@ -243,7 +226,6 @@ export async function DELETE(request: NextRequest) {
       return getRateLimitResponse(rateLimitResult.resetAt)
     }
 
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
@@ -258,7 +240,6 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Validate UUID format
     const validation = validateBody({ id }, deleteBriefSchema)
     if (!validation.success) {
       return NextResponse.json(
@@ -283,7 +264,7 @@ export async function DELETE(request: NextRequest) {
 
     if (existingBrief.created_by !== authUser.id) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized - You can only delete your own briefs' },
+        { success: false, error: 'Unauthorized' },
         { status: 403 }
       )
     }

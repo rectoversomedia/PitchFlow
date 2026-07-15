@@ -12,7 +12,6 @@ export async function middleware(request: NextRequest) {
     "/forgot-password",
     "/reset-password",
     "/api/auth",
-    "/api/ai",
     "/api/csrf",
     "/api/health",
     "/_next",
@@ -36,7 +35,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Check authentication for protected routes
+  // Check authentication
   const session = await auth()
 
   // Routes that require authentication
@@ -63,7 +62,6 @@ export async function middleware(request: NextRequest) {
   )
 
   if (isProtectedRoute && !session?.user) {
-    // Redirect to login with return URL
     const loginUrl = new URL("/login", request.url)
     loginUrl.searchParams.set("callbackUrl", pathname)
     return NextResponse.redirect(loginUrl)
@@ -75,7 +73,6 @@ export async function middleware(request: NextRequest) {
 }
 
 function addSecurityHeaders(response: NextResponse) {
-  // Content Security Policy
   response.headers.set(
     "Content-Security-Policy",
     [

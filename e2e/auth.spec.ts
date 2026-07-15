@@ -2,12 +2,11 @@ import { test, expect } from '@playwright/test'
 
 /**
  * Authentication E2E Tests
- * Tests the complete login/logout flow
+ * Tests login flow with Supabase credentials
  */
 
 test.describe('Authentication', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear cookies and localStorage before each test
     await page.context().clearCookies()
   })
 
@@ -16,22 +15,30 @@ test.describe('Authentication', () => {
     await expect(page).toHaveURL(/\/login/)
   })
 
-  test('should show login page with Google button', async ({ page }) => {
+  test('should show login page with PitchFlow branding', async ({ page }) => {
     await page.goto('/login')
 
-    // Check for Google sign in button
-    const googleButton = page.getByRole('button', { name: /google|sign in with/i })
-    await expect(googleButton.first()).toBeVisible()
+    await expect(page.getByText('PitchFlow')).toBeVisible()
+    await expect(page.getByText('AI-Powered Sponsorship Workspace')).toBeVisible()
+    await expect(page.getByRole('heading', { name: /Welcome back/i })).toBeVisible()
   })
 
-  test('should protect all dashboard routes', async ({ page }) => {
+  test('should show email and password fields', async ({ page }) => {
+    await page.goto('/login')
+
+    await expect(page.getByPlaceholder('Enter your email')).toBeVisible()
+    await expect(page.getByPlaceholder('Enter your password')).toBeVisible()
+    await expect(page.getByRole('button', { name: /Sign In/i })).toBeVisible()
+  })
+
+  test('should protect all protected routes', async ({ page }) => {
     const protectedRoutes = [
       '/dashboard',
       '/brief-intake',
       '/proposal-builder',
-      '/analytics',
-      '/calendar',
       '/client-crm',
+      '/calendar',
+      '/analytics',
     ]
 
     for (const route of protectedRoutes) {
@@ -40,24 +47,47 @@ test.describe('Authentication', () => {
     }
   })
 
-  test('should not show demo mode option', async ({ page }) => {
+  test('should show signup link', async ({ page }) => {
     await page.goto('/login')
+    await expect(page.getByText(/Sign up/i)).toBeVisible()
+  })
 
-    // Verify demo mode button is NOT present (demo mode was removed)
-    const demoButton = page.getByRole('button', { name: /demo/i })
-    await expect(demoButton).not.toBeVisible()
+  test('should show forgot password link', async ({ page }) => {
+    await page.goto('/login')
+    await expect(page.getByText(/Forgot password/i)).toBeVisible()
   })
 })
 
 test.describe('Login Flow', () => {
-  test('should navigate to Google OAuth on button click', async ({ page }) => {
+  test('should show error for empty credentials', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByRole('button', { name: /Sign In/i }).click()
+
+    // Should show validation error
+    await expect(page.getByPlaceholder('Enter your email')).toBeInvalid()
+  })
+
+  test('should show error for invalid credentials', async ({ page }) => {
     await page.goto('/login')
 
-    // Click Google sign in button
-    const googleButton = page.getByRole('button', { name: /google|sign in/i }).first()
-    await googleButton.click()
+    await page.getByPlaceholder('Enter your email').fill('invalid@pitchflow.app')
+    await page.getByPlaceholder('Enter your password').fill('wrongpassword')
+    await page.getByRole('button', { name: /Sign In/i }).click()
 
-    // Should redirect to Google OAuth
-    await expect(page).toHaveURL(/accounts\.google\.com/, { timeout: 10000 })
+    // Should show error message
+    await expect(page.getByText(/Email atau password salah|something went wrong/i)).toBeVisible({ timeout: 10000 })
+  })
+
+  test('should login with valid credentials', async ({ page }) => {
+    await page.goto('/login')
+
+    // Use demo credentials
+    await page.getByPlaceholder('Enter your email').fill('supervisor@pitchflow.app')
+    await page.getByPlaceholder('Enter your password').fill('pitchflow123')
+    await page.getByRole('button', { name: /Sign In/i }).click()
+
+    // Should redirect to dashboard
+    await page.waitForURL(/\/dashboard/, { timeout: 15000 })
+    await expect(page).toHaveURL(/\/dashboard/)
   })
 })

@@ -13,15 +13,13 @@ import {
   calculateROI,
 } from '@/lib/ai-service'
 
-// Sanitize user input to prevent prompt injection
 function sanitizeInput(input: string): string {
   return input
-    .replace(/[<>]/g, '') // Remove potential HTML tags
-    .replace(/\n{3,}/g, '\n\n') // Limit consecutive newlines
+    .replace(/[<>]/g, '')
+    .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
 
-// Valid AI actions
 const VALID_ACTIONS = [
   'brandDNA',
   'analyzeBrand',
@@ -36,14 +34,18 @@ const VALID_ACTIONS = [
 
 type AIAction = (typeof VALID_ACTIONS)[number]
 
-// Main POST handler
 export async function POST(request: NextRequest) {
   try {
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
-    // Check API key
+    const identifier = authUser.id || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const rateLimitResult = await rateLimit(identifier, RATE_LIMITS.ai)
+
+    if (!rateLimitResult.success) {
+      return getRateLimitResponse(rateLimitResult.resetAt)
+    }
+
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json(
         { success: false, error: 'Claude API key not configured' },
@@ -51,23 +53,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Rate limiting using user ID (more accurate than IP for logged-in users)
-    const identifier =
-      authUser.id ||
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      'unknown'
-
-    // Since rateLimit is now async, handle accordingly
-    const rateLimitResult = await rateLimit(identifier, RATE_LIMITS.ai)
-
-    if (!rateLimitResult.success) {
-      return getRateLimitResponse(rateLimitResult.resetAt)
-    }
-
     const body = await request.json()
     const { action, params } = body
 
-    // Validate action
     if (!action || !VALID_ACTIONS.includes(action)) {
       return NextResponse.json(
         {
@@ -81,16 +69,13 @@ export async function POST(request: NextRequest) {
     let result: string
     let error: string | undefined
 
-    // Route to appropriate AI function with sanitized params
     try {
       switch (action as AIAction) {
         case 'brandDNA':
           const dnaResult = await analyzeBrandDNA({
             brandName: sanitizeInput(params.brandName || ''),
             industry: sanitizeInput(params.industry || ''),
-            competitorBrands: (params.competitorBrands || []).map((b: string) =>
-              sanitizeInput(b)
-            ),
+            competitorBrands: (params.competitorBrands || []).map((b: string) => sanitizeInput(b)),
           })
           if (!dnaResult.success) error = dnaResult.error
           else result = dnaResult.data!
@@ -110,9 +95,7 @@ export async function POST(request: NextRequest) {
             brandName: sanitizeInput(params.brandName || ''),
             industry: sanitizeInput(params.industry || ''),
             programType: sanitizeInput(params.programType || ''),
-            targetAudience: params.targetAudience
-              ? sanitizeInput(params.targetAudience)
-              : undefined,
+            targetAudience: params.targetAudience ? sanitizeInput(params.targetAudience) : undefined,
             budget: params.budget ? sanitizeInput(params.budget) : undefined,
           })
           if (!ideasResult.success) error = ideasResult.error
@@ -124,9 +107,7 @@ export async function POST(request: NextRequest) {
             brandName: sanitizeInput(params.brandName || ''),
             programName: sanitizeInput(params.programName || ''),
             objective: sanitizeInput(params.objective || ''),
-            keyMessages: (params.keyMessages || []).map((m: string) =>
-              sanitizeInput(m)
-            ),
+            keyMessages: (params.keyMessages || []).map((m: string) => sanitizeInput(m)),
             budget: params.budget ? sanitizeInput(params.budget) : undefined,
           })
           if (!proposalResult.success) error = proposalResult.error
@@ -136,9 +117,7 @@ export async function POST(request: NextRequest) {
         case 'searchReference':
           const refResult = await searchReference({
             topic: sanitizeInput(params.topic || ''),
-            industry: params.industry
-              ? sanitizeInput(params.industry)
-              : undefined,
+            industry: params.industry ? sanitizeInput(params.industry) : undefined,
           })
           if (!refResult.success) error = refResult.error
           else result = refResult.data!
@@ -156,9 +135,7 @@ export async function POST(request: NextRequest) {
         case 'trendAnalysis':
           const trendResult = await trendAnalysis({
             industry: params.industry ? sanitizeInput(params.industry) : undefined,
-            category: params.category
-              ? sanitizeInput(params.category)
-              : undefined,
+            category: params.category ? sanitizeInput(params.category) : undefined,
           })
           if (!trendResult.success) error = trendResult.error
           else result = trendResult.data!
@@ -166,12 +143,8 @@ export async function POST(request: NextRequest) {
 
         case 'audienceInsights':
           const audienceResult = await audienceInsights({
-            industry: params.industry
-              ? sanitizeInput(params.industry)
-              : undefined,
-            demographic: params.demographic
-              ? sanitizeInput(params.demographic)
-              : undefined,
+            industry: params.industry ? sanitizeInput(params.industry) : undefined,
+            demographic: params.demographic ? sanitizeInput(params.demographic) : undefined,
           })
           if (!audienceResult.success) error = audienceResult.error
           else result = audienceResult.data!
@@ -181,12 +154,8 @@ export async function POST(request: NextRequest) {
           const roiResult = await calculateROI({
             budget: sanitizeInput(params.budget || ''),
             program: sanitizeInput(params.program || ''),
-            expectedReach: params.expectedReach
-              ? sanitizeInput(params.expectedReach)
-              : undefined,
-            duration: params.duration
-              ? sanitizeInput(params.duration)
-              : undefined,
+            expectedReach: params.expectedReach ? sanitizeInput(params.expectedReach) : undefined,
+            duration: params.duration ? sanitizeInput(params.duration) : undefined,
           })
           if (!roiResult.success) error = roiResult.error
           else result = roiResult.data!

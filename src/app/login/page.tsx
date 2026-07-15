@@ -16,15 +16,6 @@ function LoginForm() {
 
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
 
-  const handleDemoLogin = () => {
-    // Demo login - use test credentials
-    signIn("credentials", {
-      email: "demo@pitchflow.app",
-      password: "demo",
-      callbackUrl: "/dashboard",
-    })
-  }
-
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
@@ -51,23 +42,25 @@ function LoginForm() {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      background: "#f8fafc",
+      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
       padding: "20px",
     }}>
       <div style={{
         width: "100%",
         maxWidth: 420,
         background: "white",
-        borderRadius: 16,
-        boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+        borderRadius: 20,
+        boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
         padding: "40px 32px",
       }}>
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <h1 style={{
-            fontSize: 28,
-            fontWeight: 700,
-            color: "#061A3A",
+            fontSize: 32,
+            fontWeight: 800,
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
             margin: 0,
             letterSpacing: "-0.02em",
           }}>
@@ -97,7 +90,7 @@ function LoginForm() {
             color: "#64748b",
             margin: 0,
           }}>
-            Login to access your dashboard.
+            Login to access your workspace
           </p>
         </div>
 
@@ -119,13 +112,13 @@ function LoginForm() {
 
         {/* Login Form */}
         <form onSubmit={handleEmailLogin}>
-          <div style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 16 }}>
             <label style={{
               display: "block",
-              fontSize: 14,
-              fontWeight: 500,
+              fontSize: 13,
+              fontWeight: 600,
               color: "#374151",
-              marginBottom: 8,
+              marginBottom: 6,
             }}>
               Email address
             </label>
@@ -147,23 +140,26 @@ function LoginForm() {
                   width: "100%",
                   height: 48,
                   padding: "0 14px 0 44px",
-                  fontSize: 15,
+                  fontSize: 14,
                   border: "1px solid #e2e8f0",
                   borderRadius: 10,
                   outline: "none",
                   boxSizing: "border-box",
+                  transition: "border-color 0.2s",
                 }}
+                onFocus={(e) => e.target.style.borderColor = "#667eea"}
+                onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
               />
             </div>
           </div>
 
-          <div style={{ marginBottom: 12 }}>
+          <div style={{ marginBottom: 8 }}>
             <label style={{
               display: "block",
-              fontSize: 14,
-              fontWeight: 500,
+              fontSize: 13,
+              fontWeight: 600,
               color: "#374151",
-              marginBottom: 8,
+              marginBottom: 6,
             }}>
               Password
             </label>
@@ -185,12 +181,15 @@ function LoginForm() {
                   width: "100%",
                   height: 48,
                   padding: "0 44px 0 44px",
-                  fontSize: 15,
+                  fontSize: 14,
                   border: "1px solid #e2e8f0",
                   borderRadius: 10,
                   outline: "none",
                   boxSizing: "border-box",
+                  transition: "border-color 0.2s",
                 }}
+                onFocus={(e) => e.target.style.borderColor = "#667eea"}
+                onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
               />
               <button
                 type="button"
@@ -212,14 +211,14 @@ function LoginForm() {
             </div>
           </div>
 
-          <div style={{ textAlign: "right", marginBottom: 24 }}>
+          <div style={{ textAlign: "right", marginBottom: 20 }}>
             <a href="/forgot-password" style={{
               fontSize: 13,
-              color: "#2563eb",
+              color: "#667eea",
               textDecoration: "none",
               fontWeight: 500,
             }}>
-              Lupa kata sandi?
+              Forgot password?
             </a>
           </div>
 
@@ -229,7 +228,7 @@ function LoginForm() {
             style={{
               width: "100%",
               height: 48,
-              background: "#2563eb",
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
               color: "white",
               fontSize: 15,
               fontWeight: 600,
@@ -241,6 +240,7 @@ function LoginForm() {
               justifyContent: "center",
               gap: 8,
               opacity: isLoading ? 0.7 : 1,
+              transition: "opacity 0.2s",
             }}
           >
             {isLoading ? (
@@ -248,40 +248,9 @@ function LoginForm() {
                 <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
                 Processing...
               </>
-            ) : "Log In"}
+            ) : "Sign In"}
           </button>
         </form>
-
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          margin: "24px 0",
-        }}>
-          <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
-          <span style={{ padding: "0 16px", color: "#94a3b8", fontSize: 14 }}>or</span>
-          <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
-        </div>
-
-        <button
-          onClick={handleDemoLogin}
-          style={{
-            width: "100%",
-            height: 48,
-            background: "#16a34a",
-            color: "white",
-            fontSize: 15,
-            fontWeight: 500,
-            border: "none",
-            borderRadius: 10,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-          }}
-        >
-          Try Demo
-        </button>
 
         <p style={{
           textAlign: "center",
@@ -291,9 +260,9 @@ function LoginForm() {
         }}>
           Don't have an account?{" "}
           <a href="/signup" style={{
-            color: "#2563eb",
+            color: "#667eea",
             textDecoration: "none",
-            fontWeight: 500,
+            fontWeight: 600,
           }}>
             Sign up
           </a>
@@ -306,10 +275,10 @@ function LoginForm() {
         left: 0,
         right: 0,
         textAlign: "center",
-        color: "#94a3b8",
+        color: "rgba(255,255,255,0.7)",
         fontSize: 12,
       }}>
-        © 2026 Rectoverso. All rights reserved.
+        © 2026 Rectoverso Media. All rights reserved.
       </div>
 
       <style jsx>{`
@@ -329,20 +298,16 @@ function LoginLoading() {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      background: "#f8fafc",
+      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     }}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{
-          width: 40,
-          height: 40,
-          border: "3px solid #e2e8f0",
-          borderTopColor: "#2563eb",
-          borderRadius: "50%",
-          animation: "spin 1s linear infinite",
-          margin: "0 auto 16px",
-        }} />
-        <p style={{ color: "#64748b", fontSize: 14 }}>Loading...</p>
-      </div>
+      <div style={{
+        width: 48,
+        height: 48,
+        border: "4px solid rgba(255,255,255,0.3)",
+        borderTopColor: "white",
+        borderRadius: "50%",
+        animation: "spin 1s linear infinite",
+      }} />
       <style jsx>{`
         @keyframes spin {
           from { transform: rotate(0deg); }

@@ -2,17 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-auth'
 import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getRateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
-import {
-  validateBody,
-  sanitizeObject,
-  createSalesCommentSchema,
-  uuidSchema,
-} from '@/lib/validations'
+import { validateBody, sanitizeObject, createSalesCommentSchema, uuidSchema } from '@/lib/validations'
 
 // GET - Fetch user's sales comments
 export async function GET(request: NextRequest) {
   try {
-    // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
@@ -20,7 +14,6 @@ export async function GET(request: NextRequest) {
       return getRateLimitResponse(rateLimitResult.resetAt)
     }
 
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
@@ -28,15 +21,11 @@ export async function GET(request: NextRequest) {
 
     const { data: comments, error } = await supabase
       .from('sales_comments')
-      .select(`
-        *,
-        users (name, role)
-      `)
+      .select('*, users(name, role)')
       .eq('user_id', authUser.id)
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Supabase error:', error)
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -52,10 +41,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: transformedComments,
-      rateLimit: {
-        remaining: rateLimitResult.remaining,
-        resetAt: rateLimitResult.resetAt,
-      },
     })
   } catch (error) {
     console.error('Error fetching comments:', error)
@@ -69,7 +54,6 @@ export async function GET(request: NextRequest) {
 // POST - Create new comment
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
@@ -77,14 +61,12 @@ export async function POST(request: NextRequest) {
       return getRateLimitResponse(rateLimitResult.resetAt)
     }
 
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
     const supabase = await createServerClient()
     const body = await request.json()
 
-    // Validate with Zod
     const validation = validateBody(body, createSalesCommentSchema)
     if (!validation.success) {
       const errors = (validation as any).error?.errors || []
@@ -101,7 +83,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Sanitize content
     const sanitizedContent = sanitizeObject({ content: validation.data.content }).content
 
     const { data: newComment, error } = await supabase
@@ -112,14 +93,10 @@ export async function POST(request: NextRequest) {
         content: sanitizedContent,
         parent_id: validation.data.parent_id || null,
       })
-      .select(`
-        *,
-        users (name, role)
-      `)
+      .select('*, users(name, role)')
       .single()
 
     if (error) {
-      console.error('Supabase insert error:', error)
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -148,7 +125,6 @@ export async function POST(request: NextRequest) {
 // DELETE - Delete comment
 export async function DELETE(request: NextRequest) {
   try {
-    // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
@@ -156,7 +132,6 @@ export async function DELETE(request: NextRequest) {
       return getRateLimitResponse(rateLimitResult.resetAt)
     }
 
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
@@ -171,7 +146,6 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Validate UUID format
     const validation = validateBody({ id }, uuidSchema)
     if (!validation.success) {
       return NextResponse.json(
@@ -180,34 +154,13 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Verify ownership
-    const { data: existingComment } = await supabase
-      .from('sales_comments')
-      .select('user_id')
-      .eq('id', id)
-      .single()
-
-    if (!existingComment) {
-      return NextResponse.json(
-        { success: false, error: 'Comment not found' },
-        { status: 404 }
-      )
-    }
-
-    if (existingComment.user_id !== authUser.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized - You can only delete your own comments' },
-        { status: 403 }
-      )
-    }
-
     const { error } = await supabase
       .from('sales_comments')
       .delete()
       .eq('id', id)
+      .eq('user_id', authUser.id)
 
     if (error) {
-      console.error('Supabase delete error:', error)
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }

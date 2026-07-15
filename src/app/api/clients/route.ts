@@ -2,14 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-auth'
 import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getRateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
-import {
-  validateBody,
-  sanitizeObject,
-  uuidSchema,
-} from '@/lib/validations'
+import { validateBody, sanitizeObject, uuidSchema } from '@/lib/validations'
 import { z } from 'zod'
 
-// Client schemas
 const createClientSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200).trim(),
   brand_name: z.string().max(200).optional(),
@@ -23,7 +18,7 @@ const createClientSchema = z.object({
 
 const updateClientSchema = z.object({
   id: uuidSchema,
-  name: z.string().min(1, 'Name is required').max(200).trim().optional(),
+  name: z.string().min(1).max(200).trim().optional(),
   brand_name: z.string().max(200).optional().nullable(),
   email: z.string().email().max(200).optional().nullable(),
   phone: z.string().max(50).optional().nullable(),
@@ -36,7 +31,6 @@ const updateClientSchema = z.object({
 // GET - Fetch user's clients
 export async function GET(request: NextRequest) {
   try {
-    // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
@@ -44,7 +38,6 @@ export async function GET(request: NextRequest) {
       return getRateLimitResponse(rateLimitResult.resetAt)
     }
 
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
@@ -57,7 +50,6 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Supabase error:', error)
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -80,7 +72,6 @@ export async function GET(request: NextRequest) {
 // POST - Create new client
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
@@ -88,14 +79,12 @@ export async function POST(request: NextRequest) {
       return getRateLimitResponse(rateLimitResult.resetAt)
     }
 
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
     const supabase = await createServerClient()
     const body = await request.json()
 
-    // Validate with Zod
     const validation = validateBody(body, createClientSchema)
     if (!validation.success) {
       const errors = (validation as any).error?.errors || []
@@ -122,7 +111,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Supabase insert error:', error)
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -145,7 +133,6 @@ export async function POST(request: NextRequest) {
 // PUT - Update client
 export async function PUT(request: NextRequest) {
   try {
-    // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
@@ -153,14 +140,12 @@ export async function PUT(request: NextRequest) {
       return getRateLimitResponse(rateLimitResult.resetAt)
     }
 
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
     const supabase = await createServerClient()
     const body = await request.json()
 
-    // Validate with Zod
     const validation = validateBody(body, updateClientSchema)
     if (!validation.success) {
       const errors = (validation as any).error?.errors || []
@@ -179,39 +164,25 @@ export async function PUT(request: NextRequest) {
 
     const { id, ...updateData } = validation.data
 
-    // Verify ownership
-    const { data: existingClient } = await supabase
-      .from('clients')
-      .select('created_by')
-      .eq('id', id)
-      .single()
-
-    if (!existingClient) {
-      return NextResponse.json(
-        { success: false, error: 'Client not found' },
-        { status: 404 }
-      )
-    }
-
-    if (existingClient.created_by !== authUser.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized - You can only update your own clients' },
-        { status: 403 }
-      )
-    }
-
     const { data: updatedClient, error } = await supabase
       .from('clients')
       .update(updateData)
       .eq('id', id)
+      .eq('created_by', authUser.id)
       .select()
       .single()
 
     if (error) {
-      console.error('Supabase update error:', error)
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
+      )
+    }
+
+    if (!updatedClient) {
+      return NextResponse.json(
+        { success: false, error: 'Client not found or unauthorized' },
+        { status: 404 }
       )
     }
 
@@ -231,7 +202,6 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete client
 export async function DELETE(request: NextRequest) {
   try {
-    // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
@@ -239,7 +209,6 @@ export async function DELETE(request: NextRequest) {
       return getRateLimitResponse(rateLimitResult.resetAt)
     }
 
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
@@ -254,43 +223,13 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Validate UUID format
-    const validation = validateBody({ id }, uuidSchema)
-    if (!validation.success) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid client ID format' },
-        { status: 400 }
-      )
-    }
-
-    // Verify ownership
-    const { data: existingClient } = await supabase
-      .from('clients')
-      .select('created_by')
-      .eq('id', id)
-      .single()
-
-    if (!existingClient) {
-      return NextResponse.json(
-        { success: false, error: 'Client not found' },
-        { status: 404 }
-      )
-    }
-
-    if (existingClient.created_by !== authUser.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized - You can only delete your own clients' },
-        { status: 403 }
-      )
-    }
-
     const { error } = await supabase
       .from('clients')
       .delete()
       .eq('id', id)
+      .eq('created_by', authUser.id)
 
     if (error) {
-      console.error('Supabase delete error:', error)
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }

@@ -2,18 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-auth'
 import { createServerClient } from '@/lib/supabase/server'
 import { rateLimit, getRateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit'
-import {
-  validateBody,
-  sanitizeObject,
-  createProposalSchema,
-  updateProposalSchema,
-  deleteProposalSchema,
-} from '@/lib/validations'
+import { validateBody, sanitizeObject, createProposalSchema, updateProposalSchema, deleteProposalSchema } from '@/lib/validations'
 
 // GET - Fetch user's proposals
 export async function GET(request: NextRequest) {
   try {
-    // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
@@ -21,7 +14,6 @@ export async function GET(request: NextRequest) {
       return getRateLimitResponse(rateLimitResult.resetAt)
     }
 
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
@@ -34,7 +26,6 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Supabase error:', error)
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -44,15 +35,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: proposals || [],
-      rateLimit: {
-        remaining: rateLimitResult.remaining,
-        resetAt: rateLimitResult.resetAt,
-      },
-    }, {
-      headers: {
-        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
-        'X-RateLimit-Reset': String(rateLimitResult.resetAt),
-      },
     })
   } catch (error) {
     console.error('Error fetching proposals:', error)
@@ -66,7 +48,6 @@ export async function GET(request: NextRequest) {
 // POST - Create new proposal
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
@@ -74,14 +55,12 @@ export async function POST(request: NextRequest) {
       return getRateLimitResponse(rateLimitResult.resetAt)
     }
 
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
     const supabase = await createServerClient()
     const body = await request.json()
 
-    // Validate with Zod
     const validation = validateBody(body, createProposalSchema)
     if (!validation.success) {
       const errors = (validation as any).error?.errors || []
@@ -98,7 +77,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Sanitize input
     const sanitizedData = sanitizeObject(validation.data)
 
     const { data: newProposal, error } = await supabase
@@ -107,13 +85,13 @@ export async function POST(request: NextRequest) {
         title: sanitizedData.title,
         brand_name: sanitizedData.brand_name,
         pic_sales: sanitizedData.pic_sales,
-        program: sanitizedData.program || sanitizedData.title.split(' - ')[1] || '',
+        program: sanitizedData.program || '',
         industry: sanitizedData.industry || null,
         sponsorship_type: sanitizedData.sponsorship_type || null,
         year: sanitizedData.year || new Date().getFullYear(),
-        status: sanitizedData.status || 'draft',
+        status: 'new_brief',
         brief_id: sanitizedData.brief_id || null,
-        result: sanitizedData.result || null,
+        result: null,
         deadline: sanitizedData.deadline || null,
         last_activity: new Date().toISOString(),
         slides_count: sanitizedData.slides_count || 0,
@@ -123,7 +101,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Supabase insert error:', error)
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -133,13 +110,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: newProposal,
-    }, {
-      status: 201,
-      headers: {
-        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
-        'X-RateLimit-Reset': String(rateLimitResult.resetAt),
-      },
-    })
+    }, { status: 201 })
   } catch (error) {
     console.error('Error creating proposal:', error)
     return NextResponse.json(
@@ -152,7 +123,6 @@ export async function POST(request: NextRequest) {
 // PUT - Update proposal
 export async function PUT(request: NextRequest) {
   try {
-    // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
@@ -160,14 +130,12 @@ export async function PUT(request: NextRequest) {
       return getRateLimitResponse(rateLimitResult.resetAt)
     }
 
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
     const supabase = await createServerClient()
     const body = await request.json()
 
-    // Validate with Zod
     const validation = validateBody(body, updateProposalSchema)
     if (!validation.success) {
       const errors = (validation as any).error?.errors || []
@@ -202,12 +170,11 @@ export async function PUT(request: NextRequest) {
 
     if (existingProposal.created_by !== authUser.id) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized - You can only update your own proposals' },
+        { success: false, error: 'Unauthorized' },
         { status: 403 }
       )
     }
 
-    // Sanitize input
     const sanitizedData = sanitizeObject(updateData)
 
     const { data: updatedProposal, error } = await supabase
@@ -221,7 +188,6 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Supabase update error:', error)
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -231,11 +197,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: updatedProposal,
-    }, {
-      headers: {
-        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
-        'X-RateLimit-Reset': String(rateLimitResult.resetAt),
-      },
     })
   } catch (error) {
     console.error('Error updating proposal:', error)
@@ -249,7 +210,6 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete proposal
 export async function DELETE(request: NextRequest) {
   try {
-    // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
@@ -257,7 +217,6 @@ export async function DELETE(request: NextRequest) {
       return getRateLimitResponse(rateLimitResult.resetAt)
     }
 
-    // Require authentication
     const authUser = await requireAuth(request)
     if (authUser instanceof NextResponse) return authUser
 
@@ -268,15 +227,6 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json(
         { success: false, error: 'Proposal ID is required' },
-        { status: 400 }
-      )
-    }
-
-    // Validate UUID format
-    const validation = validateBody({ id }, deleteProposalSchema)
-    if (!validation.success) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid proposal ID format' },
         { status: 400 }
       )
     }
@@ -297,7 +247,7 @@ export async function DELETE(request: NextRequest) {
 
     if (existingProposal.created_by !== authUser.id) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized - You can only delete your own proposals' },
+        { success: false, error: 'Unauthorized' },
         { status: 403 }
       )
     }
@@ -308,7 +258,6 @@ export async function DELETE(request: NextRequest) {
       .eq('id', id)
 
     if (error) {
-      console.error('Supabase delete error:', error)
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -318,11 +267,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Proposal deleted successfully',
-    }, {
-      headers: {
-        'X-RateLimit-Remaining': String(rateLimitResult.remaining),
-        'X-RateLimit-Reset': String(rateLimitResult.resetAt),
-      },
     })
   } catch (error) {
     console.error('Error deleting proposal:', error)

@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
-import { createServerClient } from "@/lib/supabase/server"
 
 export type AuthenticatedUser = {
   id: string
@@ -24,7 +23,7 @@ export async function requireAuth(request: NextRequest): Promise<AuthenticatedUs
   }
 
   return {
-    id: session.user.id || (session.user as any).id,
+    id: session.user.id || (session.user as any).id || "",
     email: session.user.email || "",
     name: session.user.name,
     role: (session.user as any).role || "Sales",
@@ -43,7 +42,7 @@ export async function getOptionalAuth(request: NextRequest): Promise<Authenticat
   }
 
   return {
-    id: session.user.id || (session.user as any).id,
+    id: session.user.id || (session.user as any).id || "",
     email: session.user.email || "",
     name: session.user.name,
     role: (session.user as any).role || "Sales",
@@ -60,6 +59,7 @@ export async function getAuthenticatedClient(request: NextRequest) {
     return { user: null, supabase: null, error: user }
   }
 
+  const { createServerClient } = await import("@/lib/supabase/server")
   const supabase = await createServerClient()
   return { user, supabase, error: null }
 }
