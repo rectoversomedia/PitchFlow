@@ -1,12 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { MainLayout } from "@/components/layout/MainLayout"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { briefs as mockBriefs } from "@/lib/mock-data"
-import { Brief } from "@/lib/types"
 import { useAuth } from "@/lib/auth-context"
+import { useToast } from "@/components/ui/toast"
 import {
   Plus,
   Search,
@@ -33,6 +32,9 @@ import {
   Check,
   Loader2,
   AlertCircle,
+  AlertTriangle,
+  WifiOff,
+  RefreshCw,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -46,16 +48,19 @@ const briefStats = [
 
 export default function BriefIntakePage() {
   const router = useRouter()
-  const { userType, user } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { showToast } = useToast()
   const [action, setAction] = useState<string | null>(null)
-
-  const [briefs, setBriefs] = useState<Brief[]>([])
+  const [briefs, setBriefs] = useState<any[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [showForm, setShowForm] = useState(action === 'new')
-  const [selectedBrief, setSelectedBrief] = useState<Brief | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [selectedBrief, setSelectedBrief] = useState<any | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isError, setIsError] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
   // Handle action from URL params
   useEffect(() => {
@@ -83,34 +88,74 @@ export default function BriefIntakePage() {
     notes: '',
   })
 
-  // Fetch briefs from Supabase based on userType
-  useEffect(() => {
-    async function fetchBriefs() {
-      try {
-        if (userType === 'demo') {
-          // Demo mode - show mock data
-          setBriefs(mockBriefs)
-        } else if (userType === 'new') {
-          // New user - empty state
-          setBriefs([])
-        } else {
-          // Existing user - fetch real data
-          const res = await fetch('/api/briefs')
-          const data = await res.json()
-          if (data.success && data.data) {
-            setBriefs(data.data)
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching briefs:', error)
-      } finally {
-        setIsLoading(false)
+  // Fetch briefs from Supabase
+  const fetchBriefs = useCallback(async () => {
+    if (!isAuthenticated) return
+
+    setIsLoading(true)
+    setIsError(false)
+    setErrorMessage("")
+
+    try {
+      const res = await fetch('/api/briefs')
+      const data = await res.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch briefs')
       }
+
+      setBriefs(data.data || [])
+    } catch (error: any) {
+      console.error('Error fetching briefs:', error)
+      setIsError(true)
+      setErrorMessage(error.message || 'Gagal memuat brief. Silakan coba lagi.')
+    } finally {
+      setIsLoading(false)
     }
-    if (userType) {
+  }, [isAuthenticated])
+
+  useEffect(() => {
+    if (!authLoading) {
       fetchBriefs()
     }
-  }, [userType])
+  }, [authLoading, fetchBriefs])
+
+  // Validate form
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {}
+
+    if (!formData.brand_name.trim()) {
+      errors.brand_name = 'Nama brand wajib diisi'
+    }
+    if (!formData.pic_sales.trim()) {
+      errors.pic_sales = 'PIC Sales wajib diisi'
+    }
+    if (!formData.program.trim()) {
+      errors.program = 'Program wajib diisi'
+    }
+
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  // Reset form
+  const resetForm = () => {
+    setFormData({
+      brand_name: '',
+      pic_sales: '',
+      industry_category: '',
+      pic_contact: '',
+      program: '',
+      sponsorship_type: '',
+      objective: '',
+      target_audience: '',
+      period: '',
+      deadline: '',
+      budget_range: '',
+      notes: '',
+    })
+    setFormErrors({})
+  }
 
   const filteredBriefs = briefs.filter(brief =>
     brief.brand_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -135,7 +180,13 @@ export default function BriefIntakePage() {
   }
 
   const handleSubmitBrief = async () => {
+    if (!validateForm()) {
+      showToast('Mohon lengkapi form dengan benar', 'error')
+      return
+    }
+
     setIsSubmitting(true)
+
     try {
       const res = await fetch('/api/briefs', {
         method: 'POST',
@@ -143,43 +194,56 @@ export default function BriefIntakePage() {
         body: JSON.stringify({
           ...formData,
           status: 'new',
-          created_at: new Date().toISOString(),
         }),
       })
       const data = await res.json()
-      if (data.success) {
-        setBriefs([data.data, ...briefs])
-        setSubmitted(true)
-        setShowForm(false)
-        setFormData({
-          brand_name: '',
-          pic_sales: '',
-          industry_category: '',
-          pic_contact: '',
-          program: '',
-          sponsorship_type: '',
-          objective: '',
-          target_audience: '',
-          period: '',
-          deadline: '',
-          budget_range: '',
-          notes: '',
-        })
-        setTimeout(() => setSubmitted(false), 3000)
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to create brief')
       }
-    } catch (error) {
+
+      setBriefs([data.data, ...briefs])
+      setSubmitted(true)
+      setShowForm(false)
+      resetForm()
+      showToast('Brief berhasil dibuat!', 'success')
+
+      setTimeout(() => setSubmitted(false), 3000)
+    } catch (error: any) {
       console.error('Error creating brief:', error)
+      showToast(error.message || 'Gagal membuat brief', 'error')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     setIsSubmitting(true)
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/briefs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          status: 'draft',
+        }),
+      })
+      const data = await res.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to save draft')
+      }
+
+      setBriefs([data.data, ...briefs])
+      resetForm()
+      setShowForm(false)
+      showToast('Draft berhasil disimpan!', 'success')
+    } catch (error: any) {
+      console.error('Error saving draft:', error)
+      showToast(error.message || 'Gagal menyimpan draft', 'error')
+    } finally {
       setIsSubmitting(false)
-      alert('Draft brief berhasil disimpan!')
-    }, 1000)
+    }
   }
 
   const getStatusBadge = (status: string) => {
@@ -301,19 +365,76 @@ export default function BriefIntakePage() {
 
             {/* List */}
             <div style={{ padding: '16px' }}>
-              {isLoading ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-                  <Loader2 size={32} className="animate-spin" color="#2563eb" />
+              {/* Loading State */}
+              {isLoading && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', color: '#64748b' }}>
+                  <Loader2 size={40} className="animate-spin" style={{ marginBottom: '16px', color: '#2563eb' }} />
+                  <p style={{ fontSize: '14px' }}>Memuat brief...</p>
                 </div>
-              ) : filteredBriefs.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
-                  <FileText size={48} style={{ marginBottom: '12px', opacity: 0.5 }} />
-                  <p>Belum ada brief</p>
-                  <Button onClick={() => setShowForm(true)} style={{ marginTop: '12px' }}>
-                    Buat Brief Baru
+              )}
+
+              {/* Error State */}
+              {isError && !isLoading && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', textAlign: 'center' }}>
+                  <div style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    backgroundColor: '#fef2f2',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '16px'
+                  }}>
+                    <AlertTriangle size={32} color="#dc2626" />
+                  </div>
+                  <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#0f172a', marginBottom: '8px' }}>
+                    Gagal Memuat Data
+                  </h3>
+                  <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px', maxWidth: '300px' }}>
+                    {errorMessage || 'Terjadi kesalahan saat memuat brief.'}
+                  </p>
+                  <Button onClick={fetchBriefs} style={{ gap: '8px' }}>
+                    <RefreshCw size={16} />
+                    Coba Lagi
                   </Button>
                 </div>
-              ) : (
+              )}
+
+              {/* Empty State */}
+              {!isLoading && !isError && filteredBriefs.length === 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', textAlign: 'center' }}>
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    backgroundColor: '#f0f9ff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '20px'
+                  }}>
+                    <FileText size={40} color="#2563eb" style={{ opacity: 0.7 }} />
+                  </div>
+                  <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#0f172a', marginBottom: '8px' }}>
+                    {searchQuery ? 'Brief Tidak Ditemukan' : 'Belum Ada Brief'}
+                  </h3>
+                  <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '20px', maxWidth: '300px' }}>
+                    {searchQuery
+                      ? `Tidak ada brief yang cocok dengan "${searchQuery}"`
+                      : 'Mulai dengan membuat brief sponsorship pertama Anda'}
+                  </p>
+                  {!searchQuery && (
+                    <Button onClick={() => setShowForm(true)} style={{ gap: '8px' }}>
+                      <Plus size={16} />
+                      Buat Brief Baru
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Data List */}
+              {!isLoading && !isError && filteredBriefs.length > 0 && (
                 filteredBriefs.map((brief) => (
                   <div
                     key={brief.id}
@@ -434,6 +555,7 @@ export default function BriefIntakePage() {
                 </button>
               </div>
 
+              {/* Success Notification */}
               {submitted && (
                 <div style={{
                   padding: '12px 16px',
@@ -445,60 +567,97 @@ export default function BriefIntakePage() {
                   alignItems: 'center',
                   gap: '8px',
                   fontSize: '14px',
-                  color: '#16a34a'
+                  color: '#16a34a',
+                  animation: 'slideIn 0.3s ease'
                 }}>
                   <Check size={16} />
                   Brief berhasil dibuat!
                 </div>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <label style={{ fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '6px', display: 'block' }}>
-                    Nama Brand *
+              {/* Form Container */}
+              <div style={{
+                background: 'white',
+                borderRadius: '12px',
+                padding: '24px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+              }}>
+                {/* Brand Name Field */}
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px', display: 'block' }}>
+                    Nama Brand <span style={{ color: '#dc2626' }}>*</span>
                   </label>
                   <input
                     type="text"
                     placeholder="Contoh: Wardah, OPPO, Indomie"
                     value={formData.brand_name}
-                    onChange={(e) => handleInputChange('brand_name', e.target.value)}
+                    onChange={(e) => {
+                      handleInputChange('brand_name', e.target.value)
+                      if (formErrors.brand_name) {
+                        setFormErrors({ ...formErrors, brand_name: '' })
+                      }
+                    }}
                     style={{
                       width: '100%',
-                      height: '40px',
-                      paddingLeft: '12px',
-                      paddingRight: '12px',
+                      height: '44px',
+                      paddingLeft: '14px',
+                      paddingRight: '14px',
                       backgroundColor: '#f8fafc',
-                      border: '1px solid #e2e8f0',
+                      border: `1px solid ${formErrors.brand_name ? '#dc2626' : '#e2e8f0'}`,
                       borderRadius: '8px',
                       fontSize: '14px',
                       outline: 'none',
-                      boxSizing: 'border-box'
+                      boxSizing: 'border-box',
+                      transition: 'border-color 0.2s'
                     }}
+                    onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                    onBlur={(e) => e.target.style.borderColor = formErrors.brand_name ? '#dc2626' : '#e2e8f0'}
                   />
+                  {formErrors.brand_name && (
+                    <p style={{ fontSize: '12px', color: '#dc2626', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <AlertCircle size={12} />
+                      {formErrors.brand_name}
+                    </p>
+                  )}
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '13px', fontWeight: 500, color: '#334155', marginBottom: '6px', display: 'block' }}>
-                    PIC Sales *
+                {/* PIC Sales Field */}
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px', display: 'block' }}>
+                    PIC Sales <span style={{ color: '#dc2626' }}>*</span>
                   </label>
                   <input
                     type="text"
                     placeholder="Nama PIC Sales"
                     value={formData.pic_sales}
-                    onChange={(e) => handleInputChange('pic_sales', e.target.value)}
+                    onChange={(e) => {
+                      handleInputChange('pic_sales', e.target.value)
+                      if (formErrors.pic_sales) {
+                        setFormErrors({ ...formErrors, pic_sales: '' })
+                      }
+                    }}
                     style={{
                       width: '100%',
-                      height: '40px',
-                      paddingLeft: '12px',
-                      paddingRight: '12px',
+                      height: '44px',
+                      paddingLeft: '14px',
+                      paddingRight: '14px',
                       backgroundColor: '#f8fafc',
-                      border: '1px solid #e2e8f0',
+                      border: `1px solid ${formErrors.pic_sales ? '#dc2626' : '#e2e8f0'}`,
                       borderRadius: '8px',
                       fontSize: '14px',
                       outline: 'none',
-                      boxSizing: 'border-box'
+                      boxSizing: 'border-box',
+                      transition: 'border-color 0.2s'
                     }}
+                    onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                    onBlur={(e) => e.target.style.borderColor = formErrors.pic_sales ? '#dc2626' : '#e2e8f0'}
                   />
+                  {formErrors.pic_sales && (
+                    <p style={{ fontSize: '12px', color: '#dc2626', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <AlertCircle size={12} />
+                      {formErrors.pic_sales}
+                    </p>
+                  )}
                 </div>
 
                 <div>
