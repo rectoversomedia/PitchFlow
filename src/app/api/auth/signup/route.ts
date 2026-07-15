@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   try {
     // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
-    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.auth)
+    const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.auth)
 
     if (!rateLimitResult.success) {
       return getRateLimitResponse(rateLimitResult.resetAt)

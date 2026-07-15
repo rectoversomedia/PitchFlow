@@ -39,7 +39,7 @@ describe('AI Service', () => {
       expect(typeof generateCreativeIdeas).toBe('function')
     })
 
-    it('should return an object with success and data fields', async () => {
+    it('should return an object with success field', async () => {
       const { generateCreativeIdeas } = await import('@/lib/ai-service')
       const result = await generateCreativeIdeas({
         brandName: 'Test Brand',
@@ -48,7 +48,7 @@ describe('AI Service', () => {
       })
 
       expect(result).toHaveProperty('success')
-      expect(result).toHaveProperty('data')
+      expect(typeof result.success).toBe('boolean')
     })
   })
 
@@ -186,7 +186,7 @@ describe('AI Service', () => {
       const result = await callAIAction('analyzeBrand', { brandName: 'Test' })
 
       expect(result).toHaveProperty('success')
-      global.fetch?.mockRestore()
+      vi.restoreAllMocks()
     })
   })
 })

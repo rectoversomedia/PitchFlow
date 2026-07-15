@@ -71,7 +71,7 @@ export function validateEnvironment(): void {
   })
 
   if (!result.success) {
-    const errors = result.error.errors.map((e) => `  - ${e.path.join('.')}: ${e.message}`)
+    const errors = result.error.issues.map((e) => `  - ${e.path.join('.')}: ${e.message}`)
 
     console.error('\n❌ Environment Validation Failed\n')
     console.error('Missing or invalid environment variables:\n')

@@ -239,7 +239,7 @@ export const aiRequestSchema = z.object({
     .min(1, 'Prompt is required')
     .max(5000, 'Prompt must be less than 5000 characters')
     .trim(),
-  context: z.record(z.unknown()).optional(),
+  context: z.record(z.string(), z.unknown()).optional(),
 })
 
 // ============================================

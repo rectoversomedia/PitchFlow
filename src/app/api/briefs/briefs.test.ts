@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
 // Mock dependencies before importing route
@@ -9,9 +9,6 @@ vi.mock('@/lib/auth', () => ({
 vi.mock('@/lib/supabase/server', () => ({
   createServerClient: vi.fn(),
 }))
-
-const mockAuth = vi.mocked(import('@/lib/auth'))
-const mockSupabase = vi.mocked(import('@/lib/supabase/server'))
 
 describe('POST /api/briefs', () => {
   let mockUser: any
@@ -45,12 +42,14 @@ describe('POST /api/briefs', () => {
     }
 
     // Setup auth mock
-    mockAuth.auth.mockResolvedValue({
+    const { auth } = await import('@/lib/auth')
+    vi.mocked(auth).mockResolvedValue({
       user: mockUser,
-    })
+    } as any)
 
     // Setup supabase mock
-    mockSupabase.createServerClient.mockResolvedValue(mockSupabaseClient)
+    const { createServerClient } = await import('@/lib/supabase/server')
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabaseClient as any)
   })
 
   afterEach(() => {
@@ -77,7 +76,7 @@ describe('POST /api/briefs', () => {
 
     expect(response.status).toBe(400)
     expect(data.success).toBe(false)
-    expect(data.error).toContain('Missing required fields')
+    expect(data.error).toBe('Validation failed')
   })
 
   it('should accept valid brief data', async () => {
@@ -150,8 +149,11 @@ describe('GET /api/briefs', () => {
       }),
     }
 
-    mockAuth.auth.mockResolvedValue({ user: mockUser })
-    mockSupabase.createServerClient.mockResolvedValue(mockSupabaseClient)
+    const { auth } = await import('@/lib/auth')
+    vi.mocked(auth).mockResolvedValue({ user: mockUser } as any)
+
+    const { createServerClient } = await import('@/lib/supabase/server')
+    vi.mocked(createServerClient).mockResolvedValue(mockSupabaseClient as any)
 
     const { GET } = await import('@/app/api/briefs/route')
 

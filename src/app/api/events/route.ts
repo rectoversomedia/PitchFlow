@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   try {
     // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
-    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+    const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
     if (!rateLimitResult.success) {
       return getRateLimitResponse(rateLimitResult.resetAt)
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
   try {
     // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
-    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+    const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
     if (!rateLimitResult.success) {
       return getRateLimitResponse(rateLimitResult.resetAt)
@@ -156,7 +156,7 @@ export async function PUT(request: NextRequest) {
   try {
     // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
-    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+    const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
     if (!rateLimitResult.success) {
       return getRateLimitResponse(rateLimitResult.resetAt)
@@ -245,7 +245,7 @@ export async function DELETE(request: NextRequest) {
   try {
     // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
-    const rateLimitResult = rateLimit(clientIP, RATE_LIMITS.general)
+    const rateLimitResult = await rateLimit(clientIP, RATE_LIMITS.general)
 
     if (!rateLimitResult.success) {
       return getRateLimitResponse(rateLimitResult.resetAt)

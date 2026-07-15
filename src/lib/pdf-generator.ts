@@ -68,7 +68,7 @@ export async function generateProposalPDF(
 
   // ========== COVER PAGE ==========
   // Dark header bar
-  doc.setFillColor(hexToRgb(primaryColor))
+  doc.setFillColor(primaryColor)
   doc.rect(0, 0, pageWidth, 80, 'F')
 
   // Company name
@@ -185,7 +185,7 @@ function addSection(
   let yPos = startY
 
   // Section title with accent bar
-  doc.setFillColor(hexToRgb(COLORS.secondary))
+  doc.setFillColor(COLORS.secondary)
   doc.rect(margin, yPos, 4, 12, 'F')
 
   doc.setFontSize(14)

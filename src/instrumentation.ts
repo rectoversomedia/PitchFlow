@@ -7,14 +7,12 @@
 import * as Sentry from '@sentry/nextjs'
 import { NextResponse } from 'next/server'
 
-export default function onError(error: Error, { request }: { request: Request }) {
+export default function onError(error: Error, context: { request?: Request }) {
   // Log to console
   console.error('[Global Error Handler]', error)
 
   // Report to Sentry
-  Sentry.captureException(error, {
-    request,
-  })
+  Sentry.captureException(error)
 
   // Return generic error response
   return NextResponse.json(

@@ -1,5 +1,4 @@
 import { DefaultSession } from "next-auth"
-import { DefaultJWT } from "next-auth/jwt"
 
 export type User = {
   id: string
@@ -22,8 +21,8 @@ declare module "next-auth" {
   }
 }
 
-declare module "next-auth/jwt" {
-  interface JWT extends DefaultJWT {
+declare module "@auth/core/jwt" {
+  interface JWT {
     id?: string
     role?: string
   }

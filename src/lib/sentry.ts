@@ -1,21 +1,20 @@
 import { init, captureException, captureMessage, withScope } from '@sentry/nextjs'
 
 const SENTRY_DSN = process.env.SENTRY_DSN
-const NODE_ENV = process.env.NODE_ENV
 
 // Only initialize Sentry if DSN is available and not in development
-if (SENTRY_DSN && NODE_ENV !== 'development') {
+if (SENTRY_DSN && process.env.NODE_ENV !== 'development') {
   init({
     dsn: SENTRY_DSN,
 
     // Performance monitoring
-    tracesSampleRate: NODE_ENV === 'production' ? 0.1 : 1.0,
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
 
     // Error sampling
-    sampleRate: NODE_ENV === 'production' ? 0.1 : 1.0,
+    sampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
 
     // Environment
-    environment: NODE_ENV || 'development',
+    environment: process.env.NODE_ENV || 'development',
 
     // Release tracking
     release: process.env.VERCEL_GIT_COMMIT_SHA || process.env.npm_package_version,
@@ -57,7 +56,7 @@ if (SENTRY_DSN && NODE_ENV !== 'development') {
     // Before send hook for additional processing
     beforeSend(event, hint) {
       // Don't send events in development
-      if (NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === 'development') {
         console.log('[Sentry] Would send event:', event.exception?.values?.[0]?.value)
         return null
       }
@@ -89,7 +88,7 @@ if (SENTRY_DSN && NODE_ENV !== 'development') {
  * Track an error with Sentry
  */
 export function trackError(error: Error, context?: Record<string, unknown>): void {
-  if (!SENTRY_DSN || NODE_ENV === 'development') {
+  if (!SENTRY_DSN || process.env.NODE_ENV === 'development') {
     console.error('[Error Tracking]', error.message, context)
     return
   }
@@ -113,7 +112,7 @@ export function trackMessage(
   level: 'debug' | 'info' | 'warning' | 'error' = 'info',
   context?: Record<string, unknown>
 ): void {
-  if (!SENTRY_DSN || NODE_ENV === 'development') {
+  if (!SENTRY_DSN || process.env.NODE_ENV === 'development') {
     console.log(`[${level.toUpperCase()}]`, message, context)
     return
   }
@@ -136,7 +135,7 @@ export function trackUserAction(
   action: string,
   properties?: Record<string, unknown>
 ): void {
-  if (!SENTRY_DSN || NODE_ENV === 'development') {
+  if (!SENTRY_DSN || process.env.NODE_ENV === 'development') {
     return
   }
 
@@ -160,7 +159,7 @@ export function trackAPIPerformance(
   statusCode: number,
   durationMs: number
 ): void {
-  if (!SENTRY_DSN || NODE_ENV === 'development') {
+  if (!SENTRY_DSN || process.env.NODE_ENV === 'development') {
     return
   }
 

@@ -54,24 +54,24 @@ async function verifyDatabase() {
 
     try {
       // Check if table exists
-      const { data: tableData, error: tableError } = await supabase.rpc('get_table_info', {
+      const { data: tableData } = await supabase.rpc('get_table_info', {
         table_name: table,
-      }).catch(() => null)
+      })
 
       // Get RLS status
-      const { data: rlsData, error: rlsError } = await supabase.rpc('pg_get_table_rls_status', {
+      const { data: rlsData } = await supabase.rpc('pg_get_table_rls_status', {
         table_name: table,
-      }).catch(() => null)
+      })
 
       // Get policies count
-      const { data: policiesData, error: policiesError } = await supabase.rpc('count_policies', {
+      const { data: policiesData } = await supabase.rpc('count_policies', {
         table_name: table,
-      }).catch(() => null)
+      })
 
       // Get indexes count
-      const { data: indexesData, error: indexesError } = await supabase.rpc('count_indexes', {
+      const { data: indexesData } = await supabase.rpc('count_indexes', {
         table_name: table,
-      }).catch(() => null)
+      })
 
       const result: VerificationResult = {
         table,

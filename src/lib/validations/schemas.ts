@@ -53,7 +53,7 @@ export const CreateBriefSchema = z.object({
 export const UpdateBriefSchema = CreateBriefSchema.extend({
   id: z.string().uuid("Invalid brief ID"),
   status: BriefStatusEnum.optional(),
-}).omit({ created_by: true })
+})
 
 export const BriefIdParamSchema = z.object({
   id: z.string().uuid("Invalid brief ID")
@@ -99,7 +99,7 @@ export const UpdateClientSchema = CreateClientSchema.extend({
     .min(1, "Name is required")
     .max(200, "Name must be less than 200 characters")
     .optional(),
-}).omit({ created_by: true })
+})
 
 export const ClientIdParamSchema = z.object({
   id: z.string().uuid("Invalid client ID")
@@ -171,7 +171,7 @@ export const UpdateProposalSchema = CreateProposalSchema.extend({
     .min(1, "PIC Sales is required")
     .max(200, "PIC Sales must be less than 200 characters")
     .optional(),
-}).omit({ created_by: true })
+})
 
 export const ProposalIdParamSchema = z.object({
   id: z.string().uuid("Invalid proposal ID")
@@ -226,7 +226,7 @@ export const UpdateEventSchema = CreateEventSchema.extend({
   event_date: z.string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
     .optional(),
-}).omit({ created_by: true })
+})
 
 export const EventIdParamSchema = z.object({
   id: z.string().uuid("Invalid event ID")
