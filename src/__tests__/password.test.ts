@@ -13,6 +13,9 @@ import {
 } from '@/lib/password'
 
 describe('Password Utilities', () => {
+  // Increase timeout for bcrypt operations (12 rounds = slow)
+  const bcryptTimeout = 30000
+
   describe('hashPassword', () => {
     it('should hash a valid password', async () => {
       const password = 'TestPassword123!'
@@ -71,7 +74,7 @@ describe('Password Utilities', () => {
 
       const result = await verifyPassword('', hash)
       expect(result).toBe(false)
-    })
+    }, bcryptTimeout)
 
     it('should return false for empty hash', async () => {
       const result = await verifyPassword('TestPassword123!', '')
@@ -183,6 +186,9 @@ describe('Password Utilities', () => {
 })
 
 describe('Password Integration', () => {
+  // Increase timeout for bcrypt operations (12 rounds = slow)
+  const bcryptTimeout = 30000
+
   it('should hash and verify password correctly', async () => {
     const originalPassword = 'MySecurePassword123!'
 
@@ -192,7 +198,7 @@ describe('Password Integration', () => {
 
     expect(isValid).toBe(true)
     expect(isInvalid).toBe(false)
-  })
+  }, bcryptTimeout)
 
   it('should meet strength requirements after generation', () => {
     const password = generateSecurePassword()
